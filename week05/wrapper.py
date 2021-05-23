@@ -16,7 +16,7 @@ def copy_properties(dst):
         dst.__name__ = src.__name__
         dst.__doc__ = src.__doc__
         dst.__qualname__ = src.__qualname__
-        return dst
+        return src
     return _properties
 
 
