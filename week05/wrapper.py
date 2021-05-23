@@ -1,5 +1,5 @@
 """
-装饰器
+装饰器,带参装饰器
 
 装饰器是一个函数
 以函数作为形参
@@ -20,25 +20,28 @@ def copy_properties(dst):
     return _properties
 
 
-def logger(func):
-    @copy_properties(func)
-    def wrapper(*args, **kwargs):
-        """
-        This is a wrapper
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        print("args = {}, kwargs = {}".format(args, kwargs))
-        start = datetime.datetime.now()
-        ret = func(*args, **kwargs)
-        end = datetime.datetime.now() - start
-        print("function {} took {}s.".format(func.__name__, end.total_seconds()))
-        return ret
-    return wrapper
+def logger(t):
+    def _logger(func):
+        @copy_properties(func)
+        def wrapper(*args, **kwargs):
+            """
+            This is a wrapper
+            :param args:
+            :param kwargs:
+            :return:
+            """
+            print("args = {}, kwargs = {}".format(args, kwargs))
+            start = datetime.datetime.now()
+            ret = func(*args, **kwargs)
+            total_time = (datetime.datetime.now() - start).total_seconds()
+            if total_time > t:
+                print("function {} took {}s.".format(func.__name__, total_time))
+            return ret
+        return wrapper
+    return _logger
 
 
-@logger
+@logger(3)
 def add(*args, **kwargs):
     """
     文档字符串,第一行概述；可通过特殊属性__doc__访问；help就是调用函数的文档字符串
@@ -53,4 +56,6 @@ def add(*args, **kwargs):
 
 
 print(add(1, 2, 3, x=4, y=5))
-print(add.__doc__, add.__qualname__, add.__name__, help(add), sep='\n')
+print(add.__doc__, add.__qualname__, add.__name__)
+print("----------------------")
+print(help(add), sep="")
