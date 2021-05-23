@@ -20,7 +20,7 @@ def copy_properties(dst):
     return _properties
 
 
-def logger(t):
+def logger(duration, fn=lambda name, delta: print("function {} took {}s.".format(name, delta))):
     def _logger(func):
         @copy_properties(func)
         def wrapper(*args, **kwargs):
@@ -34,8 +34,9 @@ def logger(t):
             start = datetime.datetime.now()
             ret = func(*args, **kwargs)
             total_time = (datetime.datetime.now() - start).total_seconds()
-            if total_time > t:
-                print("function {} took {}s.".format(func.__name__, total_time))
+            if total_time > duration:
+                fn(func.__name__, duration)
+            print("function {} took {}s.".format(func.__name__, duration))
             return ret
         return wrapper
     return _logger
@@ -57,5 +58,5 @@ def add(*args, **kwargs):
 
 print(add(1, 2, 3, x=4, y=5))
 print(add.__doc__, add.__qualname__, add.__name__)
-print("----------------------")
+print("------------------------------")
 print(help(add), sep="")
