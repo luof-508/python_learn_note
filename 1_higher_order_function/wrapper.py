@@ -56,7 +56,8 @@ def add(*args, **kwargs):
     return sum(args) + sum(kwargs.values())
 
 
-print(add(1, 2, 3, x=4, y=5))
-print(add.__doc__, add.__qualname__, add.__name__)
-print("------------------------------")
-print(help(add), sep="")
+if __name__ == '__main__':
+    print(add(1, 2, 3, x=4, y=5))
+    print(add.__doc__, add.__qualname__, add.__name__)
+    print("------------------------------")
+    print(help(add), sep="")

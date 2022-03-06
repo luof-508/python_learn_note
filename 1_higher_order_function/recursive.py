@@ -1,4 +1,6 @@
 """
+递归练习
+
 需求： 将字典扁平化
 """
 
@@ -39,11 +41,12 @@ class MyFlatMethod(object):
         return dst
 
 
-res = MyFlatMethod()
-res.primary_method(src_dict)
-print(res.destination)
+if __name__ == '__main__':
+    res = MyFlatMethod()
+    res.primary_method(src_dict)
+    print(res.destination)
 
-print(res.prove_method(src_dict))
+    print(res.prove_method(src_dict))
 
-print(res.flat_map(src_dict))
+    print(res.flat_map(src_dict))
 

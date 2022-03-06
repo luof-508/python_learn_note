@@ -3,7 +3,7 @@
 二叉树的性质：
 性质1、在二叉树第i层，至多有2^(i-1)个节点
 性质2、深度为n的二叉树，最多有2^(n)-1个节点
-性质3、对应任何一课二叉树，如果其终端节点数为n0，度数为2的节点数为n2，则有n0=n2+1
+性质3、任何一棵二叉树，如果其终端节点数为n0，度数为2的节点数为n2，则有n0=n2+1
 性质4、含有n个节点的完全二叉树，深度为：int(log2(n))+1或math.ceil(log2(n+1))
 性质5、一棵n个节点的完全二叉树：假设根节点序号i=1，则其第m个节点有：
       当2*m <= n,则节点m有左孩子；
@@ -27,7 +27,7 @@
         度数为2的节点A，如果其左右孩子的值比它大，将最大值与之交互；
         度数为1的节点A，如果其左孩子比起大，则与之交互；
         如果节点A被调整到其他位置了，还需要和其孩子节点重复上述过程；（递归）
-排序过程：1、首先写一个函数，实现对单个叶子进行调整 -- 首次调整为大顶堆；拿走极值后，对跟节点进行堆调整
+排序过程：1、首先写一个函数，实现对单个叶子进行调整 -- 首次调整为大顶堆；拿走极值后，对根节点进行堆调整
 时间复杂度：O(nlog(n)),对原始状态的顺序不敏感
 空间复杂度：O(1)
 """
@@ -64,6 +64,7 @@ class HeapSolution:
 
     def heap_sort_procedure(self):
         logger.info('Start to change the origin seq as a big heap')
+        logger.info('Origin seq:{}'.format(self.seq[1:]))
         self.big_heap()
 
         logger.info('print big heap>>>>>')
@@ -83,10 +84,8 @@ class HeapSolution:
         构造大顶堆
         :return:
         """
-        logger.info('Origin seq:{}'.format(self.seq[1:]))
         logger.info('Sort the tree as a big heap')
         start_point = self.num // 2
-        logger.info('depth of the tree:{}'.format(self.depth))
         for i in range(start_point, 0, -1):
             self.adjust_node(i, self.num)
         logger.info('big heap result:{}'.format(self.seq[1:]))
