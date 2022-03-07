@@ -45,9 +45,7 @@ new_add = functools.partial(add, x=7)
 @functools.lru_cache()
 def fib(n):
     """
-    应用换算，实现空间换时间
-    :param n:
-    :return:
+    应用缓存，实现空间换时间
     """
     if n == 1:
         return 1
