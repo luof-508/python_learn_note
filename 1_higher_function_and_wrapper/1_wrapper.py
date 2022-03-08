@@ -1,3 +1,4 @@
+# coding = utf-8
 """
 装饰器,带参装饰器
 
@@ -7,6 +8,9 @@
 可使用@functionname，简化调用
 装饰器的作用是不改变业务函数，实现功能增强，同时避免侵入式代码
 """
+
+__author__ = 'fg.luo'
+
 import time
 import datetime
 

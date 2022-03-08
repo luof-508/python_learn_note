@@ -1,3 +1,4 @@
+# coding = utf-8
 """
 functools模块总结
 
@@ -12,6 +13,9 @@ functools模块总结
 AOP：面向切面编程。避免代码耦合。对于某些公共函数，在需要增强的时候，运用AOP思想，通过装饰器实现功能增强，同时让调用者和被调用者解耦
 装饰器是AOP思想的体现，装饰器的作用是不改变业务函数，实现功能增强，同时避免侵入式代码。主要运用场景：日志分析、监控、路由、参数检查、权限、设计等
 """
+
+__author__ = 'fg.luo'
+
 import datetime
 import functools
 import inspect

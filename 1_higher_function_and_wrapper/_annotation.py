@@ -1,3 +1,4 @@
+# coding = utf-8
 """
 参数注解、inspect模块、functools模块
 
@@ -17,6 +18,10 @@ inspect.signature: 按顺序拿到函数定义的 参数及其注解，返回一
 functools模块：
   1、partial:
 """
+
+__author__ = 'fg.luo'
+
+
 import inspect
 import functools
 import logging
@@ -88,6 +93,5 @@ if __name__ == '__main__':
     # inspect.isgenerator()
     # print(inspect.ismodule(inspect))
     # inspect.isbuiltin()
-    # add('1', y='2')
+    add('1', y='2')
 
-    print(sorted({'1': 1, '2': 2}.items()))
