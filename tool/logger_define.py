@@ -3,6 +3,7 @@
 __author__ = 'fg.luo'
 
 import logging
+import os.path
 
 
 class LoggerDefine:
@@ -30,7 +31,8 @@ class LoggerDefine:
         return _logger
 
     def _set_logger_file(self, _logger, file, _level=logging.INFO):
-        f = logging.FileHandler(filename=file)
+        logger_file = os.path.splitext(file)[0] + '.log'
+        f = logging.FileHandler(filename=logger_file)
         f.setLevel(_level)
         f.setFormatter(self.fn)
         _logger.addHandler(f)
