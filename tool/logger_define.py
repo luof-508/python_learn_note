@@ -7,10 +7,12 @@ import os.path
 
 
 class LoggerDefine:
-    def __init__(self, file_name='name'):
-        self.fn = logging.Formatter(
-            '[{{asctime}}]{name}-{{levelname}}: {{message}}'.format(name=file_name), style='{'
-        )
+    def __init__(self, file_name=None):
+        if file_name:
+            file_name = os.path.basename(file_name)
+        self.fmt = '[{{asctime}}]{{process}}-{{thread}}-{name}-{{levelname}}: {{message}}'.format(name=file_name)
+        self.fn = logging.Formatter(self.fmt, style='{',  datefmt="%Y-%m-%d-%H:%M:%S")
+        logging.basicConfig(level=logging.INFO, format=self.fmt, style='{', datefmt="%Y-%m-%d-%H:%M:%S")
 
     def logger_define(self, file='', _level=logging.INFO):
         """

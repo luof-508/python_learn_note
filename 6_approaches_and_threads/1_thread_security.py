@@ -40,7 +40,7 @@ daemon线程应用场景：
     daemon唯一的作用就是：当你把一个线程设置为daemon时，它会随主线程的退出而退出。简化了程序员手动关闭线程的工作。
     主要应用场景：
         1、后台任务。如发送心跳包、监控。
-        2、主线程工作才有用的线程。如主线程中维护的公共资源，主线程清调后，准备退出，工作线程使用这些资源工作也没有意义了，一起退出合适。
+        2、主线程工作才有用的线程。如主线程中维护的公共资源，主线程清掉后，准备退出，工作线程使用这些资源工作也没有意义了，一起退出合适。
         3、随时可以被终止的线程。
     如果在non-daemon线程A中，对另外一个线程B使用了join方法，则线程B设置成daemon就没什么意义了。因为线程A总是要等线程B完成后才退出；
     如果两个都是daemon线程，即使使用了join方法，主线程退出，这两个daemon现在不管结束与否，都要退出
@@ -76,7 +76,7 @@ def worker1(nums):
 
 
 def test_join():
-    time.sleep(1)
+    time.sleep(5)
     logging.info('This is test join')
 
 
@@ -127,10 +127,12 @@ if __name__ == '__main__':
     # no_hash_lst = []
     # for i in range(5):
     #     threading.Thread(target=test_no_hash, args=(no_hash_lst,)).start()
-    a = threading.local()
-    a.all = 'aaa'
-    b = 'abc'
+    # a = threading.local()
+    # a.all = 'aaa'
+    # b = 'abc'
+    #
+    # for i in range(5):
+    #     threading.Thread(target=test_local).start()
+    # logging.info('all a:{}'.format(a))
 
-    for i in range(5):
-        threading.Thread(target=test_local).start()
-    logging.info('all a:{}'.format(a))
+
