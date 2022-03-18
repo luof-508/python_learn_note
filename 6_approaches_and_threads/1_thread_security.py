@@ -11,7 +11,7 @@
             解决办法：1、print打印的字符串，作为不可变类型，作为一个整体不可分割输出。就不让print输出换行符，在字符串末尾加上换行符
                     2、使用logging模块
 
-七、daemon线程和non-daemon线程
+七、threading.Thread类中的daemon参数/属性： daemon线程和non-daemon线程
     * python程序在没有活着的non-daemon线程时退出。也就是剩下的都是daemon线程，主线程直接退出，否则只能等待non-daemon线程执行完。
     * 主线程执行完，还有daemon线程和non-daemon线程，则都继续进行。当non-daemon都执行完时，如果还有daemon，则会杀掉daemon程序退出。
     * 可见：如果要一个线程从头到尾执行完成，一定要是一个non-daemon线程。
@@ -27,7 +27,7 @@
     父线程：如果线程A启动了一个线程B，A就是B的父线程
     子线程：B就是A的子线程
 
-八、join方法：
+八、threading.Thread类中的join方法：
     join(timeout=None)，是线程的标准方法之一。
     一个线程中调用另一个线程的join方法，调用者将被阻塞，直到被调用线程终止。
     一个线程可以被join多次。
@@ -36,7 +36,7 @@
     上述当没有活着的non-daemon线程时，主线程不等daemon线程，程序直接退出了。
     想要等daemon线程执行完后再退出，则可以用join方法。
 
-daemon线程应用场景：
+七、八总结：daemon线程应用场景：
     daemon唯一的作用就是：当你把一个线程设置为daemon时，它会随主线程的退出而退出。简化了程序员手动关闭线程的工作。
     主要应用场景：
         1、后台任务。如发送心跳包、监控。
@@ -45,12 +45,16 @@ daemon线程应用场景：
     如果在non-daemon线程A中，对另外一个线程B使用了join方法，则线程B设置成daemon就没什么意义了。因为线程A总是要等线程B完成后才退出；
     如果两个都是daemon线程，即使使用了join方法，主线程退出，这两个daemon现在不管结束与否，都要退出
 
-九、threading.local:解决前面的疑问，多线程使用全局变量，怎么做到线程隔离、线程安全
+九、threading.local类:解决前面的疑问，多线程使用全局变量，怎么做到线程隔离、线程安全
     python提供threading.local类，将这个类实例化得到一个全局对象，可以实现不同线程使用这个对象存储的数据其他线程看不见。
     原理：threading.local类构件了一个大字典，其元素是每一个线程实例的地址为key，和线程对象引用的线程单独的字典的映射：
         {id(Thread): (ref(Thread), thread-local dict)}
     通过threading.local实例，就可以在不同线程中，安全的使用线程独有的数据，做到了线程间数据隔离，如本地变量一样安全。
 
+十、threading.Timer类:定时器/延时执行
+    Timer继承自Thread，这个类定义多久执行一个函数
+    class threading.Timer(interval, function,args=None, kwargs=None)
+    start方法执行之后，Timer对象会等待interval间隔再执行function函数。如果在等待执行函数之前，使用了cancel方法，则跳过函数结束
 """
 import logging
 import threading
@@ -127,12 +131,11 @@ if __name__ == '__main__':
     # no_hash_lst = []
     # for i in range(5):
     #     threading.Thread(target=test_no_hash, args=(no_hash_lst,)).start()
-    # a = threading.local()
-    # a.all = 'aaa'
-    # b = 'abc'
-    #
-    # for i in range(5):
-    #     threading.Thread(target=test_local).start()
-    # logging.info('all a:{}'.format(a))
+    a = threading.local()
+    a.all = 'aaa'
+    b = 'abc'
+    for i in range(5):
+        threading.Thread(target=test_local).start()
+    logging.info('all a:{}'.format(a))
 
 
