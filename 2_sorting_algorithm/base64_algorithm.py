@@ -25,7 +25,7 @@ from tool.logger_define import LoggerDefine
 
 
 base_name = os.path.basename(__file__)
-logger = LoggerDefine(base_name).logger_define()
+logger = LoggerDefine().get_logger()
 
 
 class ResultCheck:

@@ -27,15 +27,7 @@ import time
 from python_learn_note.tool.logger_define import LoggerDefine
 
 
-class LoggerDefineInf(LoggerDefine):
-    def __init__(self, file_name):
-        super().__init__(file_name)
-        self.logger = self._get()
-
-    def _get(self):
-        _logger = self.logger_define(file=__file__)
-        _logger.propagate = False
-        return _logger
+logger = LoggerDefine().get_logger()
 
 
 class SSHClientInf(object):
@@ -138,7 +130,6 @@ class EulerOSVersionCheckInf(object):
 if __name__ == '__main__':
     # os.path.splitext() 将文件名和扩展名分开
     # os.path.split() 返回文件的路径和文件名
-    logger = LoggerDefineInf(file_name=__file__).logger
     try:
         EulerOSVersionCheckInf().procedure()
     except Exception as e:
