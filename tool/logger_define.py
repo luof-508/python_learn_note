@@ -25,9 +25,9 @@ class LoggerDefine:
         _logger.propagate = prop
 
         if not file:
-            fmt = '[{asctime}]process:{process}-thread:{thread}-function:{funcName}-{levelname}: {message}'
+            fmt = '[{asctime}]process:{process}-thread:{threadName}-function:{funcName}-{levelname}: {message}'
         else:
-            fmt = '[{{asctime}}]{{process}}-{{thread}}-{name}-function:{{funcName}}-{{levelname}}: {{message}}'.format(
+            fmt = '[{{asctime}}]{{process}}-{{threadName}}-{name}-function:{{funcName}}-{{levelname}}: {{message}}'.format(
                 name=os.path.basename(file)
             )
         fn = logging.Formatter(fmt, style='{',  datefmt="%Y-%m-%d-%H:%M:%S")
