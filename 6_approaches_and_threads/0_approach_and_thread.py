@@ -128,12 +128,12 @@ if __name__ == '__main__':
     t = MyThread(target=worker, name='w1', args=(5,), kwargs={'a': 5})
     # t.start()
     t.run()
-    # print('==================')
-    # t1 = MyThread(target=worker, name='w2', args=(5,), kwargs={'a': 5})
-    # t1.run()
+    print('==================')
+    t1 = MyThread(target=worker, name='w2', args=(5,), kwargs={'a': 5})
+    t1.run()
 
-    # thread_lst = threading.enumerate()
-    # show_thread_info()
-    # time.sleep(2)
-    # for cur_th in thread_lst:
-    #     print('%s: %s' % (cur_th.ident, cur_th.is_alive()))
+    thread_lst = threading.enumerate()
+    show_thread_info()
+    time.sleep(2)
+    for cur_th in thread_lst:
+        print('%s: %s' % (cur_th.ident, cur_th.is_alive()))

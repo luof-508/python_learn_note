@@ -22,13 +22,14 @@
         wait（timeout=None）：设置等等标记为True的时长，None为无线等待。等到返回True。未等到超时了返回False
         ***使用场景：老板雇佣了一个工人，等工人生产杯子。---等待工作线程完成，实现线程间通信
 
-    二、threading.Lock类: 锁，凡是存在共享资源争抢的地方都可以使用锁，从而保证只有一个使用者可以完全使用这个资源。
-        当前线程在读共享的资源的时候，锁住，让其他S线程看不了.
+    二、threading.Lock类: 锁，凡是存在共享资源争抢的地方都可以使用锁，从而保证只有一个使用者可以完全使用这个资源。当前线程在读共享的资源的时候，锁住，让其他线程看不了.
         获取：lock.acquire（blocking=True, timeout=-1），成功获取锁，返回True，否则返回False
-            blocking=True:默认阻塞锁，阻塞可以设置超时时间。非阻塞锁blocking=False，禁止设置timeout
-            锁可以解决共享资源，但要特别注意死锁。死锁：所有线程都在等释放，使用锁的过程中，导致所有线程者
+            blocking=True:默认阻塞锁，阻塞可以设置超时时间。非阻塞锁blocking=False，禁止设置timeout.
         释放：lock.release（）
             即使任务完成，退出，退出之前也要释放。否则其他线程一直在获取锁，一直卡死
+
+        锁可以解决共享资源，但要特别注意死锁。
+        死锁：所有线程都在等释放，使用锁的过程中，导致所有线程都在相互等待，都没人释放，都出现阻塞状态。
 
         锁保证原子性，金融局点，特别敏感，关心的正确的结果，结果正确比效率更重要，所以一定要加锁，保证数据保证完整性，如生产100个杯子，分10个线程，
         每个线程生产10个，作为局部变量返回。但是有的线程忙，一生产不完怎么办？即木桶原理
@@ -98,6 +99,31 @@
         锁，只允许同一时间一个线程独占资源。它是特殊的信号量，即信号量计数器初值为1.
         信号量，允许多个线程访问共享资源，但这个共享资源数量有限
         锁可以看做特殊的信号量
+
+数据结构和GIL
+    queue模块：
+        标准库queue模块，提供FIFO的queue、LIFO的队列、有限队列。
+        queue类是线程安全的，适用于多线程间安全的交换数据。内部使用了Lock和Condition
+    GIL全局解释器锁：
+        Cpython在解释器进程级别有一把锁，叫GIL全局解释器锁。
+        GIL保证Cpython进程中，只有一个线程执行字节码。甚至在多核cpu的情况下，也是如此。
+        因此Cpython中，严格意义上没有多线程，同一时刻只有一个线程。Cpython中，多线程适用于：
+            IO密集型，由于线程阻塞，就会调度其他线程；
+            cpu密集型，当前线程可能会连续的获得GIL，导致其他线程几乎无法使用CPU，因为处于等待的线程重新激活，相比正在跑的线程，需要更多的时间，导致一直抢不到锁。
+            因此：IO密集型，使用多线程；CPU密集型，使用多进程，绕开GIL。
+
+            IO密集型：写的程序大量访问网络、访问文件。
+            CPU密集型：写的程序大量的计算，就是CPU密集型。
+
+    由于GIL的存在，Cpython中，绝大多数内置数据结构的读写（append、add）都是原子操作，在多线程中都是线程安全的。但是，实际上它们本身不是线程安全的类型。
+
+python线程同步总结：
+    因为GIL全局解释器锁的存在，看到python内置数据结构读写都是原子操作，如果真的要实现线程安全，可以读queue原码，如何去加锁实现线程安全的
+    Event：简单的wait，等一个状态的变化，就可以用Event。boss--worker杯子模型
+    Lock应用场景：访问和修改同一个共享资源的时候，即读写同一个资源的时候；默认阻塞锁。RLock可重入锁。   食堂窗口打饭模型
+    Barrier：等等等，等大家都到齐了，并行初始化问题，就用barrier
+    Condition要怎么用：做一对多通知，生产者消费者场景的时候，解决生产者---消费者速度不同步
+    Semaphore怎么用：信号量，倒计数，资源池使用的时候；控制边界用BoundedSemaphore
 
 """
 import datetime
@@ -511,6 +537,45 @@ class RunPoolSemaphore:
             threading.Thread(target=self.semaphore_worker, args=(self.pool,)).start()
 
 
+class MultiThreadEfficiency:
+    def __init__(self):
+        self.num = 1000000000
+
+    @staticmethod
+    def calc(num):
+        res = 0
+        for i in range(num):
+            res += i
+
+    def calc_thread_run(self):
+        st = datetime.datetime.now()
+        t1 = threading.Thread(target=self.calc, args=(self.num,))
+        t2 = threading.Thread(target=self.calc, args=(self.num,))
+        t3 = threading.Thread(target=self.calc, args=(self.num,))
+        t4 = threading.Thread(target=self.calc, args=(self.num,))
+        t5 = threading.Thread(target=self.calc, args=(self.num,))
+        t1.start()
+        t2.start()
+        t3.start()
+        t4.start()
+        t5.start()
+        t1.join()
+        t2.join()
+        t3.join()
+        t4.join()
+        t5.join()
+        logger.info('thread time:{}'.format((datetime.datetime.now() - st).total_seconds()))
+
+    def not_thread_calc(self):
+        start = datetime.datetime.now()
+        self.calc(self.num)
+        self.calc(self.num)
+        self.calc(self.num)
+        self.calc(self.num)
+        self.calc(self.num)
+        logger.info('not thread, time:{}'.format((datetime.datetime.now() - start).total_seconds()))
+
+
 if __name__ == '__main__':
     # CupDemo().run_demo()
     # TimerDemo(1, lambda x, y: x+y, 3, 4).start()
@@ -533,7 +598,12 @@ if __name__ == '__main__':
     # BarrierDemo().run_barrier()
     # SemaphoreDemo().run_s()
     # RunPoolSemaphore().run_worker()
-    sem = threading.Semaphore(3)
-    sem.release()
-    sem.release()
-    print(sem.__dict__)
+    # sem = threading.Semaphore(3)
+    # sem.release()
+    # sem.release()
+    # print(sem.__dict__)
+
+    MultiThreadEfficiency().not_thread_calc()
+    # not_thread_calc-INFO: not thread, time:385.343603
+    MultiThreadEfficiency().calc_thread_run()
+    # calc_thread_run-INFO: thread time:354.982785
