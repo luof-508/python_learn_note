@@ -8,12 +8,16 @@
 一、冯诺依曼体系架构
     输入设备 --> 存储器  --> 输出设备；存储器 <--> cpu（运算器、控制器）
     运算器：完成各种算数运算、逻辑运算、数据传输等数据加工处理
-    控制器：控制程序的执行
+    控制器：控制程序的执行。控制总线，把数据（脉冲信号）加载到运算器，经运算器输出到内存，然后由内存到IO设备（硬盘）内存：高速访问的晶片
     存储器：用于记忆程序和数据，即内存
     输入设备：将数据或程序输入到计算机中，鼠标、键盘
     输出设备：将数据或程序的处理结构展示给用户，例如显示器、打印机
 
+    windows encoding='cp936'
+    linux encoding='utf-8'
     一般来说，IO操作，默认是文件IO，如果是网络IO，都直接说网络IO
+    文本是TextIO，字节是BufferIO
+    字符流、字节流。f．read（1），f．read（1）
 
 二、文件IO常用操作
     1、打开文件：open(file, mode='r', buffering=None, encoding=None, errors=None, newline=None, closefd=True)
@@ -63,7 +67,42 @@
         上下文管理的语句块并不会开启新的作用域。
         OI被打开的时候，会获得一个文件描述符。计算机资源是有限的，所以操作系统都会做限制，保护计算机资源不要被完全耗尽。
 
+    6、stringIO和BytesIO
+    stringI0:
+        io模块中的类。可以在内存中，开辟一个文本模式的buffer，可以像文件一样操作它。当调用close方法的时候，这个buffer被释放。
+        stringI0（）．getvalue（）：无视指针，输出全部内容
+        一般来说，内存足够的情况下，一般的优化思路就是少落地，减少磁盘IO的过程，可以大大提高程序的运行效率。磁盘操作比内存操作要慢得多
+        单机stringI0，多机redis
+    BytesIO:
+        在内存中开辟一个二进制的buffer。操作与stringIO一样。
+    file-like:
+        类文件对象，可以像文件对象一样操作。socket对象、输入输出对象（stdin、stdout）都是类文件对象
+
+
+三：python的系统操作--代替shell
+    一、路径操作
+        3.4版本之前：os.path
+            os.path.split:
+            os.path
+            os.path.splitdrive（path）：将路径分割为尾部和驱动器。驱动器是安装点或空字符串，其余路径组件是尾部。在不使用驱动器规范的系统上，驱动器将始终为空字符串。示例：UNIX
+        3.4开始：pathlib．Path（）类：
+            初始化：p ＝ path（＇a＇， ＇b＇， ＇c／d＇）	当前目录下的a／b／c／d
+            p ＝ Path（＇／etc＇） 根下的etc目录
+            p ＝ Path（）当前目录
+
+    操作符／： Path对象 ／Path对象Path对象／字符串 或 字符串／Path
+    分解parts：可以返回路径中的每一个部分
+    joinpath（＊other）：连接多个字符串到Path对象中
+    获取路径：str（Path（））， bytes（Path（））
+    父目录，parent：目录的逻辑父目录
+    父目录序列，parents：索引0是最近一层父目录
+
+
+
+
 """
+import os.path
+import pathlib
 import re
 
 
@@ -86,6 +125,115 @@ def find_top_word():
     print(res[:10])
 
 
+# # 一、os.path路径操作：
+def test_os_path():
+    p = 'D:\\repository\\notes_scripts\\python_learn_note\\file_io\\file_IO_1.py'
+    print(os.path.basename(p))
+    print(os.path.relpath(p))
+    print(os.path.abspath(p))
+    print(os.path.split(p))
+    print(os.path.splitdrive(p))
+    print(os.path.dirname(p))
+    print(os.path.curdir)
+    print(os.path.exists(p))
+    print(os.path.join('abc', 'python.py'))
+
+
+# # 二、pathlib.Path
+def test_pathlib():
+
+    # 1.初始化
+    p1 = pathlib.Path()  # 当前目录
+    p2 = pathlib.Path('a', 'b', 'c/d')   # 当前目录下的a/b/c/d
+    p3 = pathlib.Path('/etc')  # 根下的etc目录
+    print(p1, p2, p3)
+
+    # 2.操作符/
+    # Path对象/Path对象；Path对象/字符串；字符串/Path对象
+    p4 = p1/'a'
+    p5 = 'b'/p1
+    p6 = p3/p2
+    print(p4, p5, p6)
+    # 3.分解parts:可以返回路径中的每一个部分
+    print(p6.parts)
+    # 4.joinpath，连接多个字符串到Path对象中
+    print(p6.joinpath('a', 'abc', 'fusion', pathlib.Path('http')))
+    # 获取路径 str(Path对象) 或bytes(Path对象)
+    print(type(p6), type(str(p6)))
+
+    # # 5.父目录：parent；
+    # # 父目录序列：parents，索引0是最近的父目录
+    p = pathlib.Path('abc/etc/sys/config/network/eth0')
+    print(type(p.parent), p.parent)
+    print(list(p.parents))
+
+    # # 6.目录操作
+    # name，目录的最后一部分，文件全名
+    print(p.name, type(p.name))
+    # suffix，后缀，文件的最后一个扩展名
+    p = pathlib.Path('/home/admin/test.tar.gz')
+    print(p.suffix)
+    # stem，目录的最后一部分，没有后缀。及文件名
+    print(p.stem)
+    print(p.stem + p.suffix == p.name)
+    # suffixes 返回多个扩展名
+    print(p.suffixes)
+    # with_suffix(suffix) 补充扩展名到路径尾部，返回新的路径，扩展名存在则不进行任何操作
+    print(p.with_suffix('.zip'), p.with_suffix('.gz'), p.with_suffix('.asc'))
+    # with_name(name) 替换目录最后一部分，返回一个新的路径
+    print(p.with_name('ll.log'))
+
+    # #7. 获取与判断操作
+    p = pathlib.Path()
+    qq = pathlib.Path('D:\\repository\\notes_scripts\\python_learn_note\\file_io\\腾讯QQ.lnk')
+    print('---' * 5)
+    print(p.cwd())  # 返回当前目录
+    print(p.home())  # 返回家目录
+    print(qq.resolve())  # 返回当前Path的绝对路径，如果当前Path是软链接，则软链接被解析，返回真实路径
+    print(qq.absolute())  # 返回绝对路径
+    print(p.is_dir())
+    print(p.is_file())
+    print(p.is_absolute())
+    print(p.is_symlink())
+    print(p.exists())
+
+    # # 8、创建文件与目录
+    print(list(pathlib.Path().iterdir()))  # 跌带当前目录
+    pathlib.Path('test.log').touch()  # 创建一个新文件
+    pathlib.Path('test/').mkdir(exist_ok=True)  # 创建一个目录
+    # pathlib.Path('test/').mkdir(mode=0o777, parents=False, exist_ok=False)
+    # parents,是否创建父目录，parents=True等同于mkdir -p；False时，父母了不存在将抛FileNotFoundError错
+    # exist_ok=True时，文件存储不抛出错
+
+    # # 9.通配符glob(pattern) 通配给定的模式
+    print('---' * 5)
+    p = pathlib.Path()
+    print(list(p.glob('test*')))  # 返回当前目录下所有以test开头的文件
+    print(list(p.glob('**/*.py')))  # 递归当前目录下的所有目录及文件，返回所有py文件
+    print(list(p.rglob('*.py')))  # 同上
+
+    # # 10.匹配match(pattern) 模式匹配，成功返回True
+    print(pathlib.Path('a/b.py').match('*.py'))
+    print(pathlib.Path('a/b/c/d.py').match('a/*/*.py'))
+    print(pathlib.Path('a/b/c/d.py').match('a/**/*.py'))
+    print(pathlib.Path('a/b/c/d.py').match('**/*.py'))
+
+    # # 11. 文件操作
+    # open，打开文件，操作与内建函数open一致
+    p = pathlib.Path('test.log')
+    with p.open(mode='w', encoding='utf8') as f:
+        f.write('abc')
+    # 读写文件
+    p.write_text('abc')
+    p.write_bytes(b'abc')  # 这里的write_bytes每次都是重新创建，慎用
+    p.read_text()
+
+
+
+
 if __name__ == '__main__':
-    copy_file()
-    find_top_word()
+    # copy_file()
+    # find_top_word()
+    # print(os.path.abspath(__file__))
+    test_pathlib()
+    # print(os.listdir())
