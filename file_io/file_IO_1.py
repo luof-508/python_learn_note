@@ -16,13 +16,14 @@
     windows encoding='cp936'
     linux encoding='utf-8'
     一般来说，IO操作，默认是文件IO，如果是网络IO，都直接说网络IO
-    文本是TextIO，字节是BufferIO
-    字符流、字节流。f．read（1），f．read（1）
 
-二、文件IO常用操作
-    1、打开文件：open(file, mode='r', buffering=None, encoding=None, errors=None, newline=None, closefd=True)
-        打开一个文件，返回一个文件对象(流对象)和文件描述符。打开失败返回异常
-        打开文件常用的操作就是读和写，访问模式有文本模式和二进制模式
+
+二、文件打开读取操作
+    1、打开文件：
+        打开文件常用的操作就是读和写，访问模式有文本模式和二进制模式。文本是TextIO，字节是BufferIO
+        字符流、字节流。f.read(1), f.read(1)
+        打开文件：open(file, mode='r', buffering=None, encoding=None, errors=None, newline=None, closefd=True)
+            打开一个文件，返回一个文件对象(流对象)和文件描述符。打开失败返回异常
         mode:
             r、w、x、a、b、t、+
             r -- 只读打开
@@ -37,7 +38,8 @@
         f.seek(offset, whence):移动文件指针位置。
             offset：偏移多少个字节。
             whence：从什么位置开始。缺省值0：表示从头开始。1：表示从当前位置开始。2：表示从EOF开始。
-                文本模式下，支持从开头向后偏移的方式，whence=0。因为偏移量offset是字节数，文本模式一个中文字包含多少个节数不确定，负向偏移或其他方式很容易就乱码报错。
+                文本模式下，支持从开头向后偏移的方式，whence=0。因为偏移量offset是字节数，文本模式一个中文字包含多少个节数不确定，负向偏移
+                    或其他方式很容易就乱码报错。
                 二进制模式下，支持任意起点的偏移，向后seek支持超界，向前不能超界，否则抛异常。
 
     3、指定缓存区：
@@ -80,30 +82,117 @@
 
 
 三：python的系统操作--代替shell
-    一、路径操作
+    一、目录及路径操作
         3.4版本之前：os.path
-            os.path.split:
-            os.path
-            os.path.splitdrive（path）：将路径分割为尾部和驱动器。驱动器是安装点或空字符串，其余路径组件是尾部。在不使用驱动器规范的系统上，驱动器将始终为空字符串。示例：UNIX
-        3.4开始：pathlib．Path（）类：
-            初始化：p ＝ path（＇a＇， ＇b＇， ＇c／d＇）	当前目录下的a／b／c／d
-            p ＝ Path（＇／etc＇） 根下的etc目录
-            p ＝ Path（）当前目录
+            os.path.split
+            os.path.splitext
+            os.listdir()
+            os.path.splitdrive(path): 将路径分割为尾部和驱动器。驱动器是安装点或空字符串，其余路径组件是尾部。在不使用驱动器规范的系统上，
+                                      驱动器将始终为空字符串。示例：UNIX
 
-    操作符／： Path对象 ／Path对象Path对象／字符串 或 字符串／Path
-    分解parts：可以返回路径中的每一个部分
-    joinpath（＊other）：连接多个字符串到Path对象中
-    获取路径：str（Path（））， bytes（Path（））
-    父目录，parent：目录的逻辑父目录
-    父目录序列，parents：索引0是最近一层父目录
+        3.4开始：pathlib.Path()类：
+        初始化：p = path('a', 'b', 'c/d')当前目录下的a/b/c/d
+              p = Path('/etc')根下的etc目录
+              p = Path()当前目录
+        操作符/： Path对象/Path对象
+                Path对象/字符串 或 字符串/Path
+        分解parts：可以返回路径中的每一个部分
+        joinpath(＊other)：连接多个字符串到Path对象中
+
+        获取路径：str(Path()), bytes(Path()))
+
+        父目录，parent：目录的逻辑父目录
+        父目最序列，parents：索引0是最近一层父目录
+
+    二、文件权限、创建、拷贝、删除操作：
+        元数据信息：os.stat（path， follow＿symlinks＝True）
+                  follow_symlinks-True:	返回文件本身信息，如果是状僵楼。
+        创建文件、目最相关：
+            pathlib.Path().touch
+            pathlib.Path().mkdir
+            pathlib.Path（）.iterdir（） 迭代当前目录
+            pathlib.Path（）.rmdir（） 删除空目录
+            pathlib.Path（）.exist（） 路径是否存在
+            pathlib.Path().is_dir()
+            pathlib.Path(). is_file()
+            pathlib.Path(). resolve()
+            pathlib.Path().absolute()
+        改变属主、属组：
+            os.chmod()
+            os.chown(path, uid, gid)
+        拷贝文件： shutil模块
+            shutil.copyfileobj（src， dst）：仅复制文件内容，元数据、权限丢失。dst要求可写。src／dst为打开的文件对象
+            shutil.copyfile（src， dst）：复制文件内容，元数据、权限丢失。src／dst为文件路径字符串 -- 本质上是调用copyfileobj
+            shutil.copymode（src， dst）：仅仅复制权限
+            shutil.copystat（src，dts） ：复制权限和其他元数据信息
+            shutil.copy（scr，dts）：复制文件内容、权限和部分元数据信息，但是不包括创建时间ctime和修改时间mtime
+                --本质上是调用 copyfile和copymode
+            shutil．copy2（src，dts）：比copy多了复制全部原数据信息，但需要平台支持
+                --本质上是调用 copyfile和copystat
+            shutil．copytree（src， dts， symlinks＝False， ignore＝None， copy＿function＝copy2）：递归复制目录，默认使用copy2
+            注意：递归复制，symlinks＝False，因为复制目录，如果追踪软连接，会破坏目录结构，出问题。复制单个文件symlinks=True
+                src必须是目录且存在，dts必须不存在
+                ignore＝func：提供一个callable（src， names） -＞ignored＿names。
+            shutil.rmtree（path， ignore＿error＿False）：递归删除	等同于rm -rfo
+                不是原子操作，10个文件删了5个后，失败，删除的5个不会恢复
+            shutil．move（src， dts， copy＿function＝copy2）：递归的移动文件、目录到目标，返回目标
+                实质是使用os.rename方法
+            shutil还支持打包功能。可以生产tar包并压缩。支持格式；zip／gz／bz／xz
+
+＊＊文件类型：
+    结构化：数据库--结构化存储，有很强模式定义数据每一行每一列是干什么的
+    半结构化：json｜xmal，按一定规格
+    非结构化：视频、图片、音频。二进制数据
+四、csv文件：半结构化数据
+    csv文件是一个按行分隔符和列分割符划分成的行和列的文本文件。不需要指定字符编码每一行成为一条记录record
+
+    表头：非必要，与字段列对齐就行
+    列分割：csv文件，按逗号分割值 Comma-Separated values
+    行分割：lrln. 最后一行可以没有换行符
+    特殊符号处理：
+    字段可以用双引号括起来，也可以不用。
+    如果字段中有特殊符号，如双引号、逗号、换行符、空格，则整个字段必须使用双引号括起来。
+    如果字段的值中有双引号，使用两个双引号表示一个转义
+    优点：
+        1、可以exce1直接打开，另存为excel,则可直接用excel公式。相比直接编辑excel,轻量化得多
+        2、高低版本excel切换，有兼容性问题，csv文件则可以避免这种问题用着数据交换工具。
+        3、甚至可以当数据库得表来处理。
+    python csv类：
+        csv.writer(fileobj).writerow()
+        csv.reader(iterable)
+五、ini文件处理：
+    作为配置文件，ini文件格式很流行。
+    中括号里面的部分成为section，每一个section内都是key＝value形成得键值对，key称为option选项
+    可见：不同section下可以有相同的option
+    ini文件解析：configparser模块的ConfigParser类
+    cfg = ConfigParser()
+    cfg.read（filename）：读取之后就常驻内存的，因为系统运行起来后，很多ini配置参数值都是常驻内存的，这里的设计考虑了ini文件的应用场景
+    cfg.sections（）：返回section列表
+    cfg.add＿section（section＿name）：增加一个section，存在抛错
+    cfg.has_section(section_name)
+    cfg.options（section）：返回section的所有option
+    cfg.has_option(section, option)
+
+    cfg.get（section， option）：从指定的section选项上去值，如果没有找到，则去DEFAULT section找。没有返回默认值
+    cfg.getint()
+    cfg.getfloat()
+    cfg.getboolean()
+    cfg.items（section）：返回指定section的键值对组成的二元组。没有section返回所有section名字及其
+    cfg.set(section, opt, value): section存在，则写入键值对，要求opt、value必须是字符串cfg.remove(section)
+    cfg.remove(section)
+    cfg.remove_option(section, option)
+
+    cfg.write(fileobj): 将当前cfg中的所有内容写如fileobj中。
 
 
 
 
 """
+import configparser
 import os.path
 import pathlib
 import re
+import csv
 
 
 def copy_file():
@@ -229,11 +318,51 @@ def test_pathlib():
     p.read_text()
 
 
+# 三、csv
+dst = """num,name,age,comm
+1,luof,20,
+2,jerry,33,male
+3,tom,30,
+4,Lily,3,"""
+def test_csv():
+    with open('test.csv', mode='w', encoding='utf8') as f:
+        for line in dst.splitlines():
+            f.write(line + '\n')
+        csv.writer(f).writerow([2, 'll', 23])
+        csv.writer(f).writerows([(6, 'hh', 5), (7, 'cle', 56, 'female')])
+    with open('test.csv', encoding='utf8') as f:
+        print(next(csv.reader(f)))
+        print(next(csv.reader(f)))
+
+
+# 四、ini
+def test_ini():
+    cfg = configparser.ConfigParser()
+    cfg.read('test.ini')
+    print(cfg.sections())
+    for section in cfg.sections():
+        for opt in cfg.options(section):
+            print(section, opt)
+        for k, v in cfg.items(section):
+            print(k, v)
+    print(cfg.items('mysql'))
+    print(cfg.options('mysql'))
+    for k, v in cfg.items():
+        print(k, v)
+    # cfg.set('test_section', 'opt', 'True')
+    cfg.add_section('test_section')
+    cfg.set('test_section', 'opt', 'True')
+    print(cfg.get('test_section', 'opt'))
+    print(cfg.getboolean('test_section', 'opt'))
+    with open('test_ini', mode='w') as f:
+        cfg.write(f)
 
 
 if __name__ == '__main__':
     # copy_file()
     # find_top_word()
     # print(os.path.abspath(__file__))
-    test_pathlib()
+    # test_pathlib()
     # print(os.listdir())
+    # test_csv()
+    test_ini()
