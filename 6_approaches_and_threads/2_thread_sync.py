@@ -134,7 +134,7 @@ import time
 from tool.logger_define import LoggerDefine
 
 
-logger = LoggerDefine().get_logger()
+logger = LoggerDefine(__name__).get_logger
 
 
 class CupDemo:

@@ -60,7 +60,51 @@ rpc的基本原则：序列化 <---> 反序列化
     不同的协议，效率不同，适用不同场景。讲究效率，接近二进制比较合适；
     慢数据交换系统（比如内网），可能XML或Json方案比较合适。但是都不应该用先落地再读取的方案
 
+八、Json： JavaScript Object Notation，JS对象标记、是一种轻量级的数据交换格式。
+    它基于ECMAscript的一个子集，采用完全独立于编程语言的文本格式来存储和表示数据
+    **文本格式来存储和表示数据
+    Json数据类型value：
+        string：字符串。由双引号包围起来的任意字符的组合，可以有转移字符
+        number：数值。整数、浮点数，可正负
+        object：无序的键值对集合，key必须是双引号包围的字符串，value可以是任意合法的值
+        array：列表
+        false:
+        true:
+        null:None
 
+    AJAX：异步传输数据
+
+    python类型	json类型
+    True		true
+    False   false
+    None			null
+    str			string
+    int		integer
+    float		float
+    list		array
+    dict    object
+    常用方法：
+        dumps json编码
+        dump json编码并存入文件
+        loads	json解码
+        load	json解码，从文件读取数据
+
+    一般json编码的数据很少落地，数据都是通过网路传输，传输的时候要考虑压缩它-key值映射，减少网络传输流量浪费
+
+    本质上json就是个文本、字符串，几乎语言编程都支持json。
+
+    九、三方插件MessagePack：一个基于二进制高效的对象序列化类库，可用于跨语言通信
+        可以像json那样，在多种语言之间交换结构对象用法和jso、pickle一样。
+
+        pip install msgpack-python
+        import msgpack
+        msgpack.dumps
+        msgpack.dump
+        msgpack.loads
+        msgpack.load
+
+    MessagePack简单易用，高效压缩，效率比json更高。	--二进制格式存储和表示数据
+    json应该更加广泛，简单-文本格式来存储和表示数据
 """
 import pickle
 
