@@ -45,13 +45,11 @@ argparse模块：
     4、参数解析：args = parse.parse_args('/etc'):
         返回一个命名空间Namespace，可通过Namespace对象访问
 
-
-
-
 """
 import argparse
 import pathlib
 import datetime
+import platform
 import stat
 
 from tool.logger_define import LoggerDefine
@@ -60,140 +58,40 @@ from tool.logger_define import LoggerDefine
 logger = LoggerDefine(__name__).get_logger
 
 
-def _parse_args(params):
+def parse_args():
     parse = argparse.ArgumentParser(prog='ls', add_help=False, description='list all files')  # 获得参数解析器
-    parse.add_argument('path', nargs='?', default='.', help='path help')  # 增加位置参数
+    # parse.add_argument('path', nargs='?', default='.', help='path help')  # 增加位置参数, ？表示可有可无，0或1
+    parse.add_argument('path', nargs='*', default='.', help='path help')  # *表示0个或多个位置参数；+代表至少1个
     parse.add_argument('-l', action='store_true')
     parse.add_argument('-a', action='store_true')
     parse.add_argument('-h', action='store_true')
-    _args = parse.parse_args(params)  # 解析参数,返回命名空间Namespace对象，可通过Namespace访问，例如Namespace.path
+    _args = parse.parse_args()  # 解析参数,返回命名空间Namespace对象，可通过Namespace访问，例如Namespace.path
     print(_args)
     parse.print_help()  # 打印帮助
     print(_args.path, _args.h)  # 访问命名空间的值
     return _args
 
 
-def show_dir(path, al=False, detail=False, human=False):
-    p = pathlib.Path(path)
-    for file in p.iterdir():
-        if not al and str(file.name).startswith('.'):
-            # 解决all
-            continue
-        if detail:
-            # 解决-l
-            # todo yield xxx
-            stat_info = file.stat()
-            # -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 test.py
-            t = datetime.datetime.fromtimestamp(stat_info.st_atime).strftime('%Y-%m-%d %H:%M:%S')
-            file.owner(), file.group()  # windows不支持，因为没有grp和pwd
-            yield _improve_get_mode(stat_info), stat_info.st_nlink, stat_info.st_uid, stat_info.st_gid, stat_info.st_size, t, file.name
-        else:
-            yield file.name
-
-
-def _get_mode(path: pathlib.Path):
-    """
-    mode
-    drw-rw-r--
-    """
-    res_mode = ''
-    if path.is_char_device():
-        file_type = 'c'
-    elif path.is_dir():
-        file_type = 'd'
-    elif path.is_symlink():
-        file_type = 'l'
-    elif path.is_block_device():
-        file_type = 'b'
-    elif path.is_socket():
-        file_type = 's'
-    elif path.is_fifo():
-        file_type = 'p'
-    else:
-        file_type = '-'
-    res_mode += file_type
-    mode_lst = ['r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x']
-    mode = bin(path.stat().st_mode)[-9:]
-    for i, x in enumerate(mode):
-        if x == '1':
-            res_mode += mode_lst[i]
-        else:
-            res_mode += '-'
-    return res_mode
-
-
-def _improve_get_mode(st: stat):
-    """
-    使用stat库
-    """
-    return stat.filemode(st.st_mode)
-
-
 class LSSolution:
-    def __init__(self):
-        self.args = self._args_parser()
+    def ls_dir(self, path, al=False, detail=False, human=False):
+        yield from sorted(self._show_dir(path, al, detail, human), key=lambda x: x[-1])
 
-    @staticmethod
-    def _args_parser():
-        parser = argparse.ArgumentParser(
-            prog='ls',
-            add_help=False,
-            description='List the file information in the dictionary')  # 获得一个参数解析器
-        parser.add_argument('path', help='The path')  # 添加位置参数
-        parser.add_argument('-a', '--all', default=False, dest='a', help='List all files, including .')  # 添加关键字参数
-        parser.add_argument('-l', help='List the details info of files')
-        parser.add_argument('-h', help='A more readable list of files')
-        args = parser.parse_args([__file__.split()])  # 解析参数
-        # parser.print_help()
-        logger.info('args:{}'.format(args.path))
-        return args
-
-    def procedure(self):
-        path = self.args.path[0]
-        if not self.args.a:
-            ig_files = self._ignore_file(pathlib.Path(path).parent)
-        else:
-            ig_files = set()
-        file_info_lst = list()
-        for p in pathlib.Path(path).parent.iterdir():
-            f = p.name
-            if f in ig_files:
+    def _show_dir(self, path, al=False, detail=False, human=False):
+        cur_p = pathlib.Path(path)
+        for file in cur_p.iterdir():
+            if not al and str(file.name).startswith('.'):  # 解决all
                 continue
-            if self.args.l:
-                stat_obj = p.stat()
-                cur_mode = self._get_mode(p)
-                n_link = str(stat_obj.st_nlink)
-                u, g = str(stat_obj.st_uid), str(stat_obj.st_gid)
-                s = stat_obj.st_size
-                if self.args.h:
-                    s = self._get_size(s)
-                t = datetime.datetime.fromtimestamp(stat_obj.st_ctime).replace(microsecond=0)
-                f = ' '.join([cur_mode, n_link, u, g, s, t, f])
-            file_info_lst.append(f)
-        res = sorted(file_info_lst, key=lambda x: x.split()[-1])
-        # logger.info('res:\n{}'.format('\n'.join(res)))
-        logger.info('finally:{}'.format(res))
-        return res
-
-    @staticmethod
-    def _ignore_file(path: pathlib.Path):
-        ig_file = set()
-        for f in path.iterdir():
-            s_file = str(f)
-            if s_file.startswith('.'):
-                ig_file.add(s_file)
-        logger.info('ignore file:{}'.format(ig_file))
-        return ig_file
-
-    def _get_size(self, size, res=None, idx=0, suffix='KMGTP'):
-        if res is None:
-            res = '{:.2f}{}'.format(size, suffix[idx])
-        if size > 1024:
-            idx += 1
-            size = size / 1024
-            res = '{:.2f}{}'.format(size, suffix[idx])
-            return self._get_size(size, res, idx)
-        return res
+            if detail:  # 解决-l
+                # todo -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 test.py
+                st = file.stat()
+                m = self._get_type(file) + self._get_mode_by_bit(st)
+                # stat.filemode(st.st_mode)  # 使用stat库获取文件mode
+                uid, gid = self._get_uid_gid(file)
+                t = datetime.datetime.fromtimestamp(st.st_atime).strftime('%Y-%m-%d %H:%M:%S')
+                sz = self._get_size(st.st_size) if human else str(st.st_size)
+                yield m, str(st.st_nlink), str(uid), str(gid), sz, t, file.name
+            else:
+                yield file.name
 
     @staticmethod
     def _get_mode(path: pathlib.Path):
@@ -201,7 +99,39 @@ class LSSolution:
         mode
         drw-rw-r--
         """
+        mode_lst = ['r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x']
+        mode = bin(path.stat().st_mode)[-9:]
         res_mode = ''
+        for i, x in enumerate(mode):
+            if x == '1':
+                res_mode += mode_lst[i]
+            else:
+                res_mode += '-'
+        return res_mode
+
+    @staticmethod
+    def _get_mode_by_bit(st: stat):
+        """
+        位运算获取文件权限
+        :param st:
+        :return:
+        """
+        st_m = st.st_mode & 0o777
+        mode_lst = ['r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x']
+        re_md = ''
+        for x in range(8, -1, -1):
+            if st_m > x & 1:
+                re_md += mode_lst[8-x]
+            else:
+                re_md += '-'
+        return re_md
+
+    @staticmethod
+    def _get_type(path: pathlib.Path):
+        """
+        mode
+        drw-rw-r--
+        """
         if path.is_char_device():
             file_type = 'c'
         elif path.is_dir():
@@ -216,35 +146,38 @@ class LSSolution:
             file_type = 'p'
         else:
             file_type = '-'
-        res_mode += file_type
+        return file_type
 
-        mode = oct(path.stat().st_mode)[-3:]
-        for x in mode:
-            if x == '7':
-                res_mode += 'rwx'
-            elif x == '6':
-                res_mode += 'rw-'
-            elif x == '5':
-                res_mode += 'r-x'
-            elif x == '4':
-                res_mode += 'r--'
-            elif x == '3':
-                res_mode += '-wx'
-            elif x == '2':
-                res_mode += '-w-'
-            elif x == '1':
-                res_mode += '--x'
-            else:
-                res_mode += '---'
-        return res_mode
+    @staticmethod
+    def _get_uid_gid(path: pathlib.Path):
+        """获取属主组
+        """
+        st = path.stat()
+        if platform.system() == 'Windows':
+            u, g = st.st_uid, st.st_gid
+        else:
+            # windows不支持pwd和grp
+            # import pwd
+            # import grp
+            # u, g = pwd.getpwuid(st.st_uid), grp.getgrgid(st.st_gid)
+            u, g = path.owner(), path.group()
+        return u, g
+
+    def _get_size(self, size, res=None, idx=0, suffix='KMGTP'):
+        if res is None:
+            res = '{:.1f}{}'.format(size, suffix[idx])
+        if size > 1024:
+            idx += 1
+            size = size / 1024
+            res = '{:.1f}{}'.format(size, suffix[idx])
+            return self._get_size(size, res, idx)
+        return res
 
 
 if __name__ == '__main__':
-    # result = LSSolution().procedure()
-    # time.sleep(0.2)
-    # for file in result:
-    #     print(file)
-    args = _parse_args(['.', '-l'])
+    args = parse_args()
     print('***' * 10)
-    for f in show_dir(args.path, args.a, args.l, args.h):
-        print(f)
+    path_lst = args.path
+    for p in path_lst:
+        for f in LSSolution().ls_dir(p, args.a, args.l, args.h):
+            print(' '.join(f))
