@@ -27,7 +27,7 @@ import time
 from python_learn_note.tool.logger_define import LoggerDefine
 
 
-logger = LoggerDefine().get_logger()
+logger = LoggerDefine(__file__).get_logger
 
 
 class SSHClientInf(object):
