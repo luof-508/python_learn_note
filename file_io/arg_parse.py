@@ -91,7 +91,7 @@ class LSSolution:
                 sz = self._get_size(st.st_size) if human else str(st.st_size)
                 yield m, str(st.st_nlink), str(uid), str(gid), sz, t, file.name
             else:
-                yield file.name
+                yield file.name,
 
     @staticmethod
     def _get_mode(path: pathlib.Path):
