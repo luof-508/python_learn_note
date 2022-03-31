@@ -52,6 +52,7 @@ argparse模块：
 import argparse
 import pathlib
 import datetime
+import stat
 
 from tool.logger_define import LoggerDefine
 
@@ -59,13 +60,13 @@ from tool.logger_define import LoggerDefine
 logger = LoggerDefine(__name__).get_logger
 
 
-def _parse_args():
+def _parse_args(params):
     parse = argparse.ArgumentParser(prog='ls', add_help=False, description='list all files')  # 获得参数解析器
     parse.add_argument('path', nargs='?', default='.', help='path help')  # 增加位置参数
     parse.add_argument('-l', action='store_true')
     parse.add_argument('-a', action='store_true')
     parse.add_argument('-h', action='store_true')
-    _args = parse.parse_args(('.', '-al'))  # 解析参数,返回命名空间Namespace对象，可通过Namespace访问，例如Namespace.path
+    _args = parse.parse_args(params)  # 解析参数,返回命名空间Namespace对象，可通过Namespace访问，例如Namespace.path
     print(_args)
     parse.print_help()  # 打印帮助
     print(_args.path, _args.h)  # 访问命名空间的值
@@ -75,7 +76,57 @@ def _parse_args():
 def show_dir(path, al=False, detail=False, human=False):
     p = pathlib.Path(path)
     for file in p.iterdir():
-        yield file.name
+        if not al and str(file.name).startswith('.'):
+            # 解决all
+            continue
+        if detail:
+            # 解决-l
+            # todo yield xxx
+            stat_info = file.stat()
+            # -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 test.py
+            t = datetime.datetime.fromtimestamp(stat_info.st_atime).strftime('%Y-%m-%d %H:%M:%S')
+            file.owner(), file.group()  # windows不支持，因为没有grp和pwd
+            yield _improve_get_mode(stat_info), stat_info.st_nlink, stat_info.st_uid, stat_info.st_gid, stat_info.st_size, t, file.name
+        else:
+            yield file.name
+
+
+def _get_mode(path: pathlib.Path):
+    """
+    mode
+    drw-rw-r--
+    """
+    res_mode = ''
+    if path.is_char_device():
+        file_type = 'c'
+    elif path.is_dir():
+        file_type = 'd'
+    elif path.is_symlink():
+        file_type = 'l'
+    elif path.is_block_device():
+        file_type = 'b'
+    elif path.is_socket():
+        file_type = 's'
+    elif path.is_fifo():
+        file_type = 'p'
+    else:
+        file_type = '-'
+    res_mode += file_type
+    mode_lst = ['r', 'w', 'x', 'r', 'w', 'x', 'r', 'w', 'x']
+    mode = bin(path.stat().st_mode)[-9:]
+    for i, x in enumerate(mode):
+        if x == '1':
+            res_mode += mode_lst[i]
+        else:
+            res_mode += '-'
+    return res_mode
+
+
+def _improve_get_mode(st: stat):
+    """
+    使用stat库
+    """
+    return stat.filemode(st.st_mode)
 
 
 class LSSolution:
@@ -193,7 +244,7 @@ if __name__ == '__main__':
     # time.sleep(0.2)
     # for file in result:
     #     print(file)
-    args = _parse_args()
+    args = _parse_args(['.', '-l'])
     print('***' * 10)
     for f in show_dir(args.path, args.a, args.l, args.h):
         print(f)
