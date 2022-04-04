@@ -5,7 +5,7 @@
 @time: 2022/3/30
 @File: arg_parse.py
 
-需求：
+一、需求：
 使用python实现shell的ls命令功能：-l、 -a和--all、 -h选项
 # ls [path] [-l] [-h] [-a]
 要求：
@@ -13,12 +13,12 @@
     2、-a、--all显示包含.开头的文件
     3、-l显示详细列表,例如：
            mode   硬链接    属主 属组 字节         时间             文件名
-        -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 test.py
+        -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 regular_expression.py
     4、-h和-l配合，任性化显示文件大小，例如：1k、1G等
     5、按文件名排序输出，时间按“年-月-日 时：分：秒”格式显示
 
 
-argparse模块：
+二、argparse模块：
     一个可执行文件或脚本都可以接收参数，例如：ls -l /etc
         /etc 是位置参数
         -l   是短选项
@@ -27,23 +27,40 @@ argparse模块：
 
     1、参数分类：
         位置参数：参数本身就对应一个参数位置
-        选项参数：分短选项-和长选项--，然后后面的才算它的参数，短选项后面也可以没有参数
+        选项参数：分短选项-和长选项--，必须通过前面的短选项-或长选项--，然后后面的才算它的参数，短、长选项后面也可以没有参数
     2、解析器参数 parse=argparse.ArgumentParser()：
         prog:程序的名称，缺省使用sys.args[0]
         add_help:自动为解析器增加-h和--help选项，默认为True
         description：为程序功能添加描述
-    3、增加参数parse.add_argument():
-        解决位置参数：
-            parse.add_argument('path', nargs='?', default='.', help='path help')
-            nargs:给位置参数path传入多少个参数值，？表示可有可无；也可明确多少个参数值，填数字
-            default：参数缺省值, '.' 表示当前路径
-        解决选项参数：
-            parse.add_argument('-l', action='store_true', help='-l help')
-            action: 给选项参数-l指定一个默认的存储值；当调用脚本传入参数中有此选项-l时，命名空间保存True，否则保存False
-                    action还可设置为const等
+    3、非必须位置参数和非必须选项参数：
+    非必须位置参数：
+        arg.add_argument('path'):这样定义时，如果不传入位置参数，将会报错。但有时后面就不想跟参数，比如ls命令，不跟参数时表示列出
+        当前目录的文件列表。如何解决呢？
+            arg.add_argument('path', nargs='?', default='.')。通过nargs和default配合，使位置参数变为非必须，?代表可有可无
+    非必须选项参数：
+        args.add_argument('-l'),这样定义后，调用脚本必须跟参数-l，否则报错。使用nargs='?'只是将选项参数-l后面对应的值变为非必须：
+            通过args.add_argument('-l'， action='store_true'),使用action参数，给选项参数-l指定一个默认的存储值；当调用脚本传
+            入参数中有此选项-l时，命名空间保存True，否则保存False。action还可设置为const等
 
     4、参数解析：args = parse.parse_args('/etc'):
         返回一个命名空间Namespace，可通过Namespace对象访问
+
+三、判断操作系统：
+                    windows       linux
+os.name               nt          posix
+sys.platform         win32    python2-linux2;python3-linux
+platform.system()   Windows       Linux
+
+四、pwd和grp模块：
+    pwd模块，提供了一个Unix 密码数据库(/etc/passwd)的接口，这个数据库包含本地机器用户账户信息：
+        pwd.getpwuid(uid): 返回对应uid的用户信息
+        pwd.getpwnam(name): 返回对应name的用户信息
+        pwd.getpwall(): 返回所有用户信息
+
+    grp模块，提供了一个Unix 用户组/group(/etc/group)数据库的接口：
+        grp.getgrgid(gid): 返回对应gid的组信息
+        grp.getgrname(name): 返回对应group name的组信息
+        grp.getgrall(): 返回所有组信息
 
 """
 import argparse
@@ -82,7 +99,7 @@ class LSSolution:
             if not al and str(file.name).startswith('.'):  # 解决all
                 continue
             if detail:  # 解决-l
-                # todo -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 test.py
+                # todo -rw-rw-r--  1    root:root   5   2022-03-30 20：00:07 regular_expression.py
                 st = file.stat()
                 m = self._get_type(file) + self._get_mode_by_bit(st)
                 # stat.filemode(st.st_mode)  # 使用stat库获取文件mode
@@ -91,7 +108,7 @@ class LSSolution:
                 sz = self._get_size(st.st_size) if human else str(st.st_size)
                 yield m, str(st.st_nlink), str(uid), str(gid), sz, t, file.name
             else:
-                yield file.name
+                yield file.name,
 
     @staticmethod
     def _get_mode(path: pathlib.Path):
