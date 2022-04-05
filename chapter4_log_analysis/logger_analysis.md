@@ -155,11 +155,7 @@ def extract_info_by_regular_expression():
         'status': int,
         'size': int
     }
-    extract_res = re_obj.groupdict()
-    for name, value in ops.items():
-        if extract_res[name]:
-            extract_res[name] = value(extract_res[name])
-    return dict((k, ops.get(k, v)) for k, v in re_obj.groupdict().items())
+    return dict((k, ops.get(k, lambda x: x)(v)) for k, v in re_obj.groupdict().items())
 
 
 if __name__ == '__main__':

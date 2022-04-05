@@ -79,11 +79,7 @@ class LoggerAnalysisDemo:
             'status': int,
             'size': int
         }
-        extract_res = re_obj.groupdict()
-        for name, value in ops.items():
-            if extract_res[name]:
-                extract_res[name] = value(extract_res[name])
-        return dict((k, ops.get(k, v)) for k, v in re_obj.groupdict().items())
+        return dict((k, ops.get(k, lambda x: x)(v)) for k, v in re_obj.groupdict().items())
 
     def convert_fields(self):
         """转换time、request、status、size类型
