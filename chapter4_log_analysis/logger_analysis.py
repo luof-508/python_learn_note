@@ -68,19 +68,6 @@ class LoggerAnalysisDemo:
             fields.append(field)
         self.extract_fields = fields
 
-    def extract_info_by_regular_expression(self):
-        pattern = r'(?P<remote>[\d.]{7,}) - - \[(?P<datetime>[^\[\]]+)\] "(?P<request>[^"]+)" ' \
-                  r'(?P<status>\d+) (?P<size>\d+) "-" "(?P<useragent>[^"]+)"'
-        regex = re.compile(pattern)
-        re_obj = regex.match(self.log_path)
-        ops = {
-            'datetime': lambda time_str: datetime.datetime.strptime(time_str, "%d/%b/%Y:%H:%M:%S %z"),
-            'request': lambda request_str: dict(zip(('method', 'url', 'protocol'), request_str.split())),
-            'status': int,
-            'size': int
-        }
-        return dict((k, ops.get(k, lambda x: x)(v)) for k, v in re_obj.groupdict().items())
-
     def convert_fields(self):
         """转换time、request、status、size类型
         """
@@ -107,10 +94,41 @@ class LoggerAnalysisDemo:
         return dict(zip(('method', 'url', 'protocol'), request_str.split()))
 
 
+class RegularExtract:
+    def __init__(self):
+        self.pattern = r'(?P<remote>[\d.]{7,}) - - \[(?P<datetime>[^\[\]]+)\] "(?P<request>[^"]+)" ' \
+              r'(?P<status>\d+) (?P<size>\d+) "-" "(?P<useragent>[^"]+)"'
+        self.regex = re.compile(self.pattern)
+        self.ops = {
+            'datetime': lambda time_str: datetime.datetime.strptime(time_str, "%d/%b/%Y:%H:%M:%S %z"),
+            'request': lambda request_str: dict(zip(('method', 'url', 'protocol'), request_str.split())),
+            'status': int,
+            'size': int
+        }
+
+    def extract_info_by_regular_expression(self, line: str) -> dict:
+        """考虑异常处理，当没匹配到的时候return None
+
+        :param line:
+        :return:
+        """
+        re_obj = self.regex.match(line)
+        if re_obj:
+            return dict((k, self.ops.get(k, lambda x: x)(v)) for k, v in re_obj.groupdict().items())
+
+    def extract_file(self, path: str):
+        res_lst = []
+        with open(path, encoding='utf8') as f:
+            for line in f:
+                res_lst.append(self.extract_info_by_regular_expression(line))
+        return res_lst
+
+
 if __name__ == '__main__':
     demo_obj = LoggerAnalysisDemo(_log_test_strs)
     demo_obj.extract_info_by_split()
     convert_res = demo_obj.convert_fields()
     logger.info('convert result by split  :{}'.format(convert_res))
-    con_regular_res = demo_obj.extract_info_by_regular_expression()
+    regular_demo = RegularExtract()
+    con_regular_res = regular_demo.extract_info_by_regular_expression(_log_test_strs)
     logger.info('Convert result by regular:{}'.format(con_regular_res))
