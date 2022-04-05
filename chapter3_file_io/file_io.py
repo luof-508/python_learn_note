@@ -3,7 +3,7 @@
 """
 @author: feng.luo
 @time: 2022/3/20
-@File: file_io.py
+@File: chapter3_file_io.py
 
 一、冯诺依曼体系架构
     输入设备 --> 存储器  --> 输出设备；存储器 <--> cpu（运算器、控制器）
@@ -216,7 +216,7 @@ def find_top_word():
 
 # # 一、os.path路径操作：
 def test_os_path():
-    p = 'D:\\repository\\notes_scripts\\python_learn_note\\file_io\\file_io.py'
+    p = 'D:\\repository\\notes_scripts\\python_learn_note\\chapter3_file_io\\chapter3_file_io.py'
     print(os.path.basename(p))
     print(os.path.relpath(p))
     print(os.path.abspath(p))
@@ -274,7 +274,7 @@ def test_pathlib():
 
     # #7. 获取与判断操作
     p = pathlib.Path()
-    qq = pathlib.Path('D:\\repository\\notes_scripts\\python_learn_note\\file_io\\腾讯QQ.lnk')
+    qq = pathlib.Path('/chapter3_file_io\\腾讯QQ.lnk')
     print('---' * 5)
     print(p.cwd())  # 返回当前目录
     print(p.home())  # 返回家目录
