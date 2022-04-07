@@ -36,7 +36,7 @@ A[信息提取] -->B(数据处理) --> C(数据分发) --> D(文件加载) -->E(
 ```
 
 ## 2.2 方案实现
-### 2.2.1 信息提取
+### 2.2.1 信息提取(extract message)
 **信息提取策略**
 - 按行提取日志中的remote、datetime、request、status、size、useragent信息； 
 - datetime、status、size分别保存为datetime对象、int类型、int类型； 
@@ -189,11 +189,118 @@ if __name__ == '__main__':
     logger.info('Convert result by regular:{}'.format(con_regular_res))
 ```
 
-### 2.2.2 数据分析
-    - 达到
+### 2.2.2 数据处理(analysis date)
+**1. 数据处理流程**  
+```mermaid
+graph LR
+A[load函数<br>数据载入]--> B[数据提取<br>extract函数] --> C[数据处理<br>window窗函数+handler函数]
+```
+**2. 时序数据**： 运维环境中，日志、监控等产生的数据都是与时间相关的数据，按照时间先后产生并记录下来的数据，
+所以一般按照时间对数据进行分析。  
+
+**数据载入**：数据就是日志的一行行记录，载入数据就是文件IO的读取。将获取数据的方法封装成函数，
+实现数据载入。  
+
+**数据分析**：很多数据，都是和时间相关的，按照时间顺序产生的，数据分析的时候，需要按照时间求值。
+所以一般采用时间窗分析。
+- 时间窗分析：   
+    - interval：表示每一次求值的时间间隔   
+    - width：时间宽度，指每一次求值的时间窗口宽度。当width > interval时：数据求值会有重叠；
+  否则数据会有丢失，一般不采用这种方案。
+
+- 数据处理：封装handler函数用于处理时间窗函数获取的数据。handler函数由用户需求自定义传入。
+```python
+#!/usr/bin/env python3
+# coding=utf-8
+"""
+@author: feng.luo
+@time: 2022/4/6
+@File: logger_analysis_2_handle_info.py
+"""
+
+import datetime
+
+from tool.logger_define import LoggerDefine
+from logger_analysis_1_extract_info import RegularExtract
+
+
+logger = LoggerDefine(__name__).get_logger
+
+
+class HandleInfo(RegularExtract):
+    """
+    数据分析基本程序结构：数据加载（load函数） -- 数据提取（extract函数）-- 数据处理（window窗函数 + handler函数）
+    """
+    def __init__(self):
+        super().__init__()
+
+    def source_load(self, path):
+        """载入数据"""
+        with open(path, encoding='utf8') as f:
+            for line in f:
+                field = self.extract_info_by_regular_expression(line)
+                if field:
+                    yield field
+                else:
+                    continue  # TODO 解析失败处理：抛异常或打印error日志
+
+    @staticmethod
+    def window(src, handler, width, interval):
+        """时间窗口函数
+
+        :param src: 数据源，生成器，取数据
+        :param handler: 数据处理函数
+        :param width: 时间窗口宽度，秒
+        :param interval: 处理时间间隔，秒
+        """
+        start = datetime.datetime.strptime("1970/01/01 01:01:01 +0800", "%Y/%m/%d %H:%M:%S %z")
+        delta = datetime.timedelta(seconds=width-interval)
+        buffer = []  # 窗口中待计算的数据
+        for data in src:
+            if not data:
+                continue
+            # 存入buffer中等待计算
+            current = data['datetime']
+            buffer.append(data)
+            if (current - start).total_seconds() >= interval:
+                ret = handler(buffer)
+                # 打印结果
+                print('ret:{}'.format(ret))
+                start = current
+                buffer = [x for x in buffer if x['datetime'] > current - delta]
+
+    @staticmethod
+    def handler_method(iterable):
+        """
+        数据处理函数
+        """
+        vals = [x['value'] for x in iterable]
+        return sum(vals) // len(vals)
+
+
+if __name__ == '__main__':
+    hand = HandleInfo()
+    hand.window(hand.source_load('test.log'), hand.handler_method, 8, 5)
+```
 
 
 ### 2.2.3 数据分发
+**生产者消费者模型**： 编程中凡是有上下级关系的，都可以称为生产者消费者模型。 
+这种模型，速度很难做到统一，因此有了消息队列，起到缓冲作用。
+水库，干涸期和**期，但是水库蓄洪也有能力的，所以消息队列也有上限。
+**消费者能力一般要大于生产者，略大于都不行，万一有一个消费者挂了呢。**
+```mermaid
+graph LR
+A((生产者1)) --> B[消息队列<br>queue] 
+A1((生产者2)) --> B[消息队列<br>queue]
+B[消息队列<br>queue] --> C((消费者1))
+B[消息队列<br>queue]  --> C2((消费者2))
+B[消息队列<br>queue]  --> C1((消费者3))
+```
+
+    
+    
+    
 ### 2.2.4 文件加载及分析器
 ### 2.2.5 浏览器分析
 
