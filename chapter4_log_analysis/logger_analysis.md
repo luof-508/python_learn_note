@@ -28,23 +28,32 @@ Logstash收集日志，并存放到Elasticsearch集群中，Kibana从ES集群中
 # 2 项目：Web Server日志分析
 **需求描述**：nginx、tomcat等WEB Server会产生`log_strs`日志信息。需提取日志中的每一段有效数据，用作后期分析。  
 `log_strs=123.125.71.36 - - [06/Apr/2017:18:09:25 +0800] "GET / HTTP/1.1" 200 8642 "-" "Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"`  
-**方案设计**：  
-1. 按行提取日志中的remote、datetime、request、status、size、useragent信息；
-2. datetime、status、size分别保存为datetime对象、int类型、int类型；
-3. request提取为method、url、protocol。  
- 
-**方案实现**：  
+## 2.1 方案设计  
+**日志分析流程图**：
+```mermaid
+graph LR
+A[信息提取] -->B(数据处理) --> C(数据分发) --> D(文件加载) -->E(浏览器分析)
+```
+
+## 2.2 方案实现
+### 2.2.1 信息提取
+**信息提取策略**
+- 按行提取日志中的remote、datetime、request、status、size、useragent信息； 
+- datetime、status、size分别保存为datetime对象、int类型、int类型； 
+- request提取为method、url、protocol。
+
+**策略实现**：  
 - datetime为固定格式[.* .*]，根据开头'['、结尾']'提取时间对象  
 - url格式为"GET url protocol",根据开头、结尾为'"'提取
 
-**代码实现--空格分割**：  
+**代码实现方法一--空格分割**：  
 ```python
 #!/usr/bin/env python3
 # coding=utf-8
 """
 @author: feng.luo
 @time: 2022/4/5
-@File: logger_analysis.py
+@File: logger_analysis_1_extract_info.py
 """
 import datetime
 
@@ -140,14 +149,14 @@ if __name__ == '__main__':
     convert_res = demo_obj.convert_fields()
     logger.info('convert result by split  :{}'.format(convert_res))
 ```  
-**代码实现--正则匹配**：
+**代码实现方法二--正则匹配**：
 ```python
 #!/usr/bin/env python3
 # coding=utf-8
 """
 @author: feng.luo
 @time: 2022/4/5
-@File: logger_analysis.py
+@File: logger_analysis_1_extract_info.py
 """
 import datetime
 import re
@@ -179,5 +188,17 @@ if __name__ == '__main__':
     con_regular_res = extract_info_by_regular_expression()
     logger.info('Convert result by regular:{}'.format(con_regular_res))
 ```
+
+### 2.2.2 数据分析
+    - 达到
+
+
+### 2.2.3 数据分发
+### 2.2.4 文件加载及分析器
+### 2.2.5 浏览器分析
+
+
+
+
 
 **参考链接**：[https://blog.csdn.net/qq_43141726/article/details/114583115?ops_request_misc=&request_id=&biz_id=102&spm=1018.2226.3001.4187]()
