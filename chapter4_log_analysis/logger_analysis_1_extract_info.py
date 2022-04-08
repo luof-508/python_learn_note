@@ -95,6 +95,9 @@ class LoggerAnalysisDemo:
 
 
 class RegularExtract:
+    """
+    数据提取
+    """
     def __init__(self):
         self.pattern = r'(?P<remote>[\d.]{7,}) - - \[(?P<datetime>[^\[\]]+)\] "(?P<request>[^"]+)" ' \
               r'(?P<status>\d+) (?P<size>\d+) "-" "(?P<useragent>[^"]+)"'
@@ -108,9 +111,6 @@ class RegularExtract:
 
     def extract_info_by_regular_expression(self, line: str) -> dict:
         """考虑异常处理，当没匹配到的时候return None
-
-        :param line:
-        :return:
         """
         re_obj = self.regex.match(line)
         if re_obj:
