@@ -134,59 +134,6 @@ def add_func(x=1, y=2):
     return x + y
 
 
-'------------------------------实现命令分发器--------------------------------------------------'
-# 实现函数注册，及自动分发
-
-
-def dispatcher():
-    command_dic = {}
-
-    def register(name):
-        def _register(func):
-            if command_dic.get(name):
-                logger.error('No double registration')
-                return
-            command_dic[name] = func
-
-        return _register
-
-    def default_func(param=None):
-        logger.info('Unknown cmd, pass')
-
-    def _dispatcher():
-        while True:
-            cmd = input('Enter the cmd>>>')
-            if cmd == 'quit':
-                return
-            param = input('Input the parameter or just press the enter>>>')
-            command_dic.get(cmd, default_func)(param) if param else command_dic.get(cmd, default_func)()
-    return register, _dispatcher
-
-
-reg, disp = dispatcher()
-
-
-@reg('python')
-def func_1(param=None):
-    if param:
-        logger.info(f'This is func_1, parameter:{param}')
-    else:
-        logger.info(f'This is func_1, no parameter')
-
-
-@reg('fg_luo')
-def func_2(param=None):
-    if param:
-        logger.info(f'This is func_1, parameter:{param}')
-    else:
-        logger.info(f'This is func_1, no parameter')
-
-
-@reg('fg_luo')
-def func_3(param=None):
-    pass
-
-
 if __name__ == '__main__':
     # result = add(x=8, y=5)
     # logger.info('New add:{}'.format(result))
@@ -198,5 +145,4 @@ if __name__ == '__main__':
     # add_func(1, y=2)
     # add_func(y=2, x=1)
     # time.sleep(2)
-    # add_func(1, 2)
-    disp()
+    add_func(1, 2)
