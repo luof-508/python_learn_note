@@ -32,7 +32,7 @@ Logstash收集日志，并存放到Elasticsearch集群中，Kibana从ES集群中
 **日志分析流程图**：
 ```mermaid
 graph LR
-A[信息提取] -->B(数据处理) --> C(数据分发) --> D(文件加载) -->E(浏览器分析)
+A[数据加载] -->B(信息提取) --> C(数据分发) --> D(函数注册与调度) -->E(数据分析)
 ```
 
 ## 2.2 方案实现
@@ -316,8 +316,8 @@ B[消息队列<br>queue]  --> C1((消费者3))
 
 
 **通过分发器（调度器）实现数据分发：**   
-**大量数据处理：** 通过分发器，将数据分发给多个消费者处理数据；每个消费者拿到后，通过同一个窗函数处理数据
-（不同的handler、width、interval），因此要有函数注册机制。  
+**大量数据处理：** 通过分发器，将数据分发给多个消费者处理数据；每个消费者拿到后，通过同一个窗函数处理
+数据 （不同的handler、width、interval），因此要有函数注册机制。  
 **方案流程：** 数据加载load -> 数据提取extract -> 函数注册与数据分发  
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&ensp;&emsp;&emsp;&ensp;&emsp;&emsp;|->消费者1数据分析window(handler1, width1, interval1)  
@@ -444,15 +444,388 @@ reg(do_nothing_handler, 8, 5)
 
 # 启动：数据分发并调度函数处理数据
 run()
+```
+***封装为类,继承类HandleInfo***
+```python
+import datetime
+import queue
+import threading
+import traceback
+from queue import Queue
 
+from tool.logger_define import LoggerDefine
+from logger_analysis_2_handle_info import HandleInfo
+
+
+logger = LoggerDefine(__name__).get_logger
+
+
+class DispatcherInfo(HandleInfo):
+    def __init__(self):
+        super(DispatcherInfo, self).__init__()
+        # 数据加载与提取
+        self.src_info = self.source_load('test.log')
+
+    # 时间窗口函数
+    @staticmethod
+    def window(src: Queue, handler, width: int, interval: int):
+        start_time = datetime.datetime.strptime('1970/01/01 01:01:01 +0800', "%Y/%m/%d %H:%M:%S %z")
+        delta = datetime.timedelta(seconds=width-interval)
+        buffer = []
+        while True:
+            try:
+                data = src.get(timeout=2)
+            except queue.Empty:
+                err_msg = traceback.format_exc()
+                logger.error('Error: {}'.format(err_msg))
+                return
+            if not data:
+                continue
+            current = data['datetime']
+            buffer.append(data)
+            if (current - start_time).total_seconds() > interval:
+                ret = handler(buffer)
+                print(ret)
+                buffer = [x for x in buffer if x['datetime'] > current - delta]
+                start_time = current
+
+    @staticmethod
+    def do_nothing_handler(iterable):
+        return iterable
+
+    # 分发器
+    def dispatcher(self):
+        """分发器（调度器）
+        """
+        threads = []
+        queues = []
+
+        def _reg(handler, width, interval):
+            # 注册函数：实例化一个线程对象，并保存；每一个线程各自有一个队列，保存自己要处理的数据
+            src = Queue()
+            queues.append(src)
+            t = threading.Thread(target=self.window, args=(src, handler, width, interval))
+            threads.append(t)
+
+        def _run():
+            # 数据分发；并调度函数，各自处理数据
+            for t in threads:
+                t.start()
+            # 数据分发
+            for data in self.src_info:
+                for q in queues:
+                    q.put(data)
+        return _reg, _run
+
+
+if __name__ == '__main__':
+    analysis = DispatcherInfo()
+    reg, run = analysis.dispatcher()
+    # 注册窗口
+    reg(analysis.do_nothing_handler, 8, 5)
+    # 启动：数据分发并调度函数处理数据
+    run()
 ```
 
 
-### 2.2.4 文件加载及分析器
+### 2.2.4 文件加载及状态码分析
+**完成状态码分析功能：**  
+分析日志状态码很重要，通过海量数据分析就能够知道是否遭受了攻击，是否被爬取及爬取高峰期，是否有盗链等。
+百度爬虫名称：Baiduspider；
+谷歌爬虫名称：Googlebot
+
+**优化数据加载**：支持批量文件加载
+
+**代码实现--继承类DispatcherInfo**
+```python
+import pathlib
+
+from tool.logger_define import LoggerDefine
+from logger_analysis_3_dispatcher_info import DispatcherInfo
+
+
+logger = LoggerDefine(__name__).get_logger
+
+
+class AnalysisInfo(DispatcherInfo):
+    def __init__(self):
+        super(AnalysisInfo, self).__init__()
+        self.src_info = self.load_info('test.log')
+
+    def load_info(self, *paths):
+        """数据加载
+
+        接收一批路径加载，判断路径是否存在。如果路径为普通文件，则当日志处理；如果为目录，则迭代目录下的普通文件，不深层次递归。
+        """
+        file_lst = []
+        for path in paths:
+            p = pathlib.Path(path)
+            if not p.exists():
+                continue
+            if p.is_dir():
+                file_lst.extend([f for f in p.iterdir() if f.is_file() and not str(f).startswith('.')])
+            elif p.is_file():
+                file_lst.append(p)
+        for p in file_lst:
+            yield from self.open_file(p)
+
+    def open_file(self, path: pathlib.Path):
+        with path.open(encoding='utf8') as f:
+            for line in f:
+                ret = self.extract_info_by_regular_expression(line)
+                if ret:
+                    yield ret
+                else:
+                    # TODO 未解析到信息抛出或打印日志
+                    continue
+
+    @staticmethod
+    def status_handler(iterable):
+        """状态分析
+
+        状态码中包含了很多信息：比如：
+        304，服务器收到客户端提交的请求参数，发现资源未变化，要求浏览器使用静态资源的缓存。304占比较大，说明静态缓存效果明显，服务器压力较小。
+        404，服务器找不到请求的资源。404占比较大，说明html中出现了错误链接，或者尝试嗅探网站资源。
+        如果400、500占比突然开始增大，网站肯定出现了问题。
+        """
+        ret = {}
+        total = len(iterable)
+        for data in iterable:
+            status = data['status']
+            if not ret.get(status):
+                ret[status] = 0
+            ret[status] += 1
+        return {k: float('{:.2f}'.format(v/total*100)) for k, v in ret.items()}
+
+
+if __name__ == '__main__':
+    analysis_info = AnalysisInfo()
+    # 数据分发与函数调度
+    reg, run = analysis_info.dispatcher()
+    # 注册窗口
+    reg(analysis_info.status_handler, 8, 5)
+    # 启动：数据分发并调度函数处理数据
+    run()
+```
 ### 2.2.5 浏览器分析
+**浏览器分析：useragent**  
+useragent：指的是软件（浏览器）安装一定的格式向远端的服务器提供一个标识自己的字符串。
+useragent: 客户端信息，包含用户类型、什么操作系统、浏览器类型（IE、chrome）、浏览器版本、
+浏览器核心、spider等信息。  
+- http协议中，在http头传送user-agent字段。 user-agent可以随意修改。
+- chrome查看useragent：F12进入控制台--Console--navigator.userAgent。
+- chrome useragent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) 
+AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.54 Safari/537.36'  
+
+***分析useragent，可以查看大部分用户浏览器版本，然后可以做对应的版本兼容适配，满足大部分用户需求***  
+
+**浏览器browser分析和状态码status分析的差异在于：**  
+- status分析，关注的是某一段时间内，状态码所占的比例，进而分析网站的效率、网站状态、是否有嗅探等。
+- browser分析，关注很长一段时间内，用户所使用的浏览器是什么，进而做兼容适配，提升用户体验，指导测
+试侧重点。
+- 因此，status分析width、interval可能需要时间重叠，数据分析也是按interval进行；browser分析
+则不需要时间重叠，切统计了从开始到最后的总体数据
+
+**browser分析用到的模块**： pyyaml、ua-parser、user-agents
+
+**代码实现**  
+```python
+import collections
+import datetime
+from user_agents import parse
+
+from logger_analysis_4_analysis_info import AnalysisInfo
 
 
+class WebAnalysis(AnalysisInfo):
+    def __init__(self):
+        super(WebAnalysis, self).__init__()
+        self.ops = {
+            'datetime': lambda time_str: datetime.datetime.strptime(time_str, "%d/%b/%Y:%H:%M:%S %z"),
+            'request': lambda request_str: dict(zip(('method', 'url', 'protocol'), request_str.split())),
+            'status': int,
+            'size': int,
+            'useragent': lambda us: parse(us)
+        }
+        self.ua_dict = collections.defaultdict(lambda: 0)
 
+    def browser_handler(self, iterable):
+        for data in iterable:
+            ua = data['useragent']
+            self.ua_dict[ua.browser.family, ua.browser.version_string] += 1
+        return self.ua_dict
+
+
+if __name__ == '__main__':
+    log_analysis = WebAnalysis()
+    # 数据分发与函数调度
+    reg, run = log_analysis.dispatcher()
+    # 注册函数
+    reg(log_analysis.status_handler, 10, 5)
+    reg(log_analysis.browser_handler, 10, 10)
+    # 函数调度
+    run()
+```
+# 3 日志分析完整代码
+**web server日志分析（status分析和useragent）流程：** 信息加载与提取：load函数和extract函数
+-> 数据采集与处理：滑动窗口window函数和handler函数 -> 最终落地需要采用生产者消费者模型，通过多
+线程实现数据分发、数据缓冲和函数调度，多任务高效处理不同分析信息的需求：dispatcher函数  
+
+**完整代码**
+```python
+#!/usr/bin/env python3
+# coding=utf-8
+import collections
+import datetime
+import pathlib
+import queue
+import re
+import threading
+import traceback
+
+import user_agents
+
+from tool.logger_define import LoggerDefine
+
+
+logger = LoggerDefine(__name__).get_logger
+
+_log_test_strs = '123.125.71.36 - - [06/Apr/2017:18:09:25 +0800] "GET /o2o/media.html?menu=3 HTTP/1.1" 200 8642 "-" ' \
+                 '"Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"'
+pattern = r'(?P<remote>[\d.]{7,}) - - \[(?P<datetime>[^\[\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+) "-" "(?P<useragent>[^"]+)"'
+regex = re.compile(pattern)
+ops = {
+    "datetime": lambda x: datetime.datetime.strptime(x, "%d/%b/%Y:%H:%M:%S %z"),
+    "request": lambda x: {zip(('method', 'url', 'protocol'), x.split())},
+    "status": int,
+    "size": int,
+    "useragent": lambda x: user_agents.parse(x)
+}
+
+
+# 数据提取和加载
+def source_load(*paths):
+    path_list = []
+    for path in paths:
+        p = pathlib.Path(path)
+        if not p.exists():
+            continue
+        if p.is_file():
+            path_list.append(p)
+        elif p.is_dir():
+            path_list.extend([pathlib.Path(f) for f in p.iterdir() if f.is_file() and not str(f).startswith('.')])
+    for p in path_list:
+        yield from open_file(p)
+
+
+def open_file(path: pathlib.Path):
+    with path.open(encoding='utf8') as f:
+        for line in f:
+            ret_dic = extract(line)
+            if ret_dic:
+                yield ret_dic
+            else:
+                # todo 抛异常或打印error日志，统计未解析成功的日志
+                continue
+
+
+def extract(line: str):
+    ret = regex.match(line)
+    if ret:
+        return {k: ops.get(k, lambda x: x)(v) for k, v in ret.groupdict().items()}
+
+
+# 数据采集和处理
+def window(src: queue.Queue, handler, width: int, interval: int):
+    """按宽度width采集数据，并将采集的数据穿个handler处理
+
+    :param src: 加载的数据, 生成器
+    :param handler: 数据处理函数
+    :param width: 数据采集宽度
+    :param interval: 数据采集间隔
+    :return:
+    """
+    start_time = datetime.datetime.strptime('1970/01/01 01:01:01 +0800', "%Y/%m/%d %H:%M:%S %z")
+    delta = datetime.timedelta(width - interval)
+    buffer = []
+    while True:
+        try:
+            data = src.get(timeout=2)
+        except queue.Empty:
+            err_msg = traceback.format_exc()
+            logger.error('Error:{}'.format(err_msg))
+            return
+        if not data:
+            continue
+        current = data['datetime']
+        buffer.append(data)
+        if (current - start_time).total_seconds() > interval:
+            ret = handler(buffer)
+            # 打印结果
+            print(ret)
+            start_time = current
+            buffer = [d for d in buffer if current - d['datetime'] < delta]
+
+
+def status_handler(iterable):
+    s = dict()
+    for data in iterable:
+        status = data['status']
+        if not s.get(status):
+            s[status] = 0
+        s[status] += 1
+    total = sum(s.values())
+    return {k: float('{:.2f}'.format(v/total*100)) for k, v in s.items()}
+
+
+browser_ret = collections.defaultdict(lambda: 0)
+
+
+def browser_handler(iterable):
+    for data in iterable:
+        ua = data['useragent']
+        browser_ret[ua.browser.family, ua.browser.version_string] += 1
+    return browser_ret
+
+
+# 数据分发和函数调度
+def dispatcher():
+    """
+    函数注册：即为数据处理函数实例化一个线程和传入函数参数
+    函数分发：起线程分析数据
+    # 调度器需要记录每一个注册函数的队列，以便于为每一个函数（消费者）分发数据
+    :return:
+    """
+    threads = []
+    queues = []
+
+    def _reg(handler, width, interval):
+        q = queue.Queue()
+        queues.append(q)
+        t = threading.Thread(target=window, args=(q, handler, width, interval))
+        threads.append(t)
+
+    def _run():
+        for t in threads:
+            t.start()
+        for data in loaded_src:
+            for q in queues:
+                q.put(data)
+    return _reg, _run
+
+
+if __name__ == '__main__':
+    # 数据载入
+    loaded_src = source_load('test.log')
+    # 数据分发和函数调度
+    reg, run = dispatcher()
+    # 函数注册
+    reg(status_handler, 10, 5)
+    reg(browser_handler, 10, 10)
+    # 函数调度
+    run()
+
+```
 
 
 **参考链接**：[https://blog.csdn.net/qq_43141726/article/details/114583115?ops_request_misc=&request_id=&biz_id=102&spm=1018.2226.3001.4187]()
