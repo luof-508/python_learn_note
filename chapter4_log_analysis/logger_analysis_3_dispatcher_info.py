@@ -39,116 +39,90 @@ queue模块：提供一个先进先出的队列。
 """
 import datetime
 import queue
-import re
 import threading
 import traceback
 from queue import Queue
 
 from tool.logger_define import LoggerDefine
+from logger_analysis_2_handle_info import HandleInfo
 
 
 logger = LoggerDefine(__name__).get_logger
-_log_test_strs = '123.125.71.36 - - [06/Apr/2017:18:09:25 +0800] "GET /o2o/media.html?menu=3 HTTP/1.1" 200 8642 "-" ' \
-                 '"Mozilla/5.0 (compatible; Baiduspider/2.0; +http://www.baidu.com/search/spider.html)"'
-pattern = r'(?P<remote>[\d.]{7,}) - - \[(?P<datetime>[^\[\]]+)\] "(?P<request>[^"]+)" (?P<status>\d+) (?P<size>\d+) "-"' \
-          ' "(?P<useragent>[^"]+)"'
-regex = re.compile(pattern)
-ops = {
-    "datetime": lambda x: datetime.datetime.strptime(x, "%d/%b/%Y:%H:%M:%S %z"),
-    "request": lambda x: dict(zip(('method', 'url', 'protocol'), x)),
-    "status": int,
-    "size": int
-}
 
 
-#####################################################################################
-# 数据加载与提取
-def extract_info(line: str):
-    ret = regex.match(line)
-    if ret:
-        return dict((k, ops.get(k, lambda x: x)(v)) for k, v in ret.groupdict().items())
+class DispatcherInfo(HandleInfo):
+    def __init__(self):
+        super(DispatcherInfo, self).__init__()
+        # 数据加载与提取
+        self.src_info = self.source_load('test.log')
+
+    # 时间窗口函数
+    @staticmethod
+    def window(src: Queue, handler, width: int, interval: int):
+        start_time = datetime.datetime.strptime('1970/01/01 01:01:01 +0800', "%Y/%m/%d %H:%M:%S %z")
+        delta = datetime.timedelta(seconds=width-interval)
+        buffer = []
+        while True:
+            try:
+                data = src.get(timeout=2)
+            except queue.Empty:
+                err_msg = traceback.format_exc()
+                logger.error('Error: {}'.format(err_msg))
+                return
+            if not data:
+                continue
+            current = data['datetime']
+            buffer.append(data)
+            if (current - start_time).total_seconds() > interval:
+                ret = handler(buffer)
+                print(ret)
+                buffer = [x for x in buffer if x['datetime'] > current - delta]
+                start_time = current
+
+    @staticmethod
+    def do_nothing_handler(iterable):
+        print(iterable)
+        return iterable
+
+    # 分发器
+    def dispatcher(self):
+        """
+        分发器（调度器）实现：数据加载load -- 数据提取extract -- 数据分发 |-- 消费者1数据分析window
+                                                                 |-- 消费者2数据分析window
+                                                                 |-- 消费者3数据分析window
+        大量数据处理：通过分发器，将数据分发给多个消费者处理数据；每个消费者拿到后，通过同一个窗函数处理数据（不同的handler、width、interval）
+        ，因此要有函数注册机制。
+        如何分发：轮询，一对多的，多副本方式，把同一份数据分发给不同的消费者处理
+        消息队列如何使用：数据载入后放入queue中，分发器从queue中拿数据，分发给不同的消费者。
+        如何注册：调度器内部记录有哪些消费者，并记录消费者的自己的队列。
+        多线程：每一个消费者一个线程。
+        :return:
+        """
+        threads = []
+        queues = []
+
+        def _reg(handler, width, interval):
+            # 注册函数：实例化一个线程对象，并保存；每一个线程各自有一个队列，保存自己要处理的数据
+            src = Queue()
+            queues.append(src)
+            t = threading.Thread(target=self.window, args=(src, handler, width, interval))
+            threads.append(t)
+
+        def _run():
+            # 数据分发；并调度函数，各自处理数据
+            for t in threads:
+                t.start()
+            # 数据分发
+            for data in self.src_info:
+                for q in queues:
+                    q.put(data)
+        return _reg, _run
 
 
-def load_info(path: str):
-    with open(path, encoding='utf8') as f:
-        for line in f:
-            ret = extract_info(line)
-            if ret:
-                yield ret
-
-
-src_info = load_info('test.log')
-
-
-#####################################################################################
-# 时间窗口函数
-def window(src: Queue, handler, width: int, interval: int):
-    start_time = datetime.datetime.strptime('1970/01/01 01:01:01 +0800', "%Y/%m/%d %H:%M:%S %z")
-    delta = datetime.timedelta(seconds=width-interval)
-    buffer = []
-    while True:
-        try:
-            data = src.get(timeout=5)
-        except queue.Empty:
-            err_msg = traceback.format_exc()
-            logger.error('Error: {}'.format(err_msg))
-            return
-        if not data:
-            continue
-        current = data['datetime']
-        buffer.append(data)
-        if (current - start_time).total_seconds() > interval:
-            ret = handler(buffer)
-            print(ret)
-            buffer = [x for x in buffer if x['datetime'] > current - delta]
-            start_time = current
-
-
-def do_nothing_handler(iterable):
-    print(iterable)
-    return iterable
-
-
-#####################################################################################
-# 分发器
-def dispatcher():
-    """
-    分发器（调度器）实现：数据加载load -- 数据提取extract -- 数据分发 |-- 消费者1数据分析window
-                                                             |-- 消费者2数据分析window
-                                                             |-- 消费者3数据分析window
-    大量数据处理：通过分发器，将数据分发给多个消费者处理数据；每个消费者拿到后，通过同一个窗函数处理数据（不同的handler、width、interval）
-    ，因此要有函数注册机制。
-    如何分发：轮询，一对多的，多副本方式，把同一份数据分发给不同的消费者处理
-    消息队列如何使用：数据载入后放入queue中，分发器从queue中拿数据，分发给不同的消费者。
-    如何注册：调度器内部记录有哪些消费者，并记录消费者的自己的队列。
-    多线程：每一个消费者一个线程。
-    :return:
-    """
-    threads = []
-    queues = []
-
-    def _reg(handler, width, interval):
-        # 注册函数：实例化一个线程对象，并保存；每一个线程各自有一个队列，保存自己要处理的数据
-        src = Queue()
-        queues.append(src)
-        t = threading.Thread(target=window, args=(src, handler, width, interval))
-        threads.append(t)
-
-    def _run():
-        # 数据分发；并调度函数，各自处理数据
-        for t in threads:
-            t.start()
-        # 数据分发
-        for data in src_info:
-            for q in queues:
-                q.put(data)
-    return _reg, _run
-
-
-reg, run = dispatcher()
-
-# 注册窗口
-reg(do_nothing_handler, 8, 5)
-
-# 启动：数据分发并调度函数处理数据
-run()
+if __name__ == '__main__':
+    analysis = DispatcherInfo()
+    reg, run = analysis.dispatcher()
+    # 注册窗口
+    reg(analysis.do_nothing_handler, 8, 5)
+    # 启动：数据分发并调度函数处理数据
+    run()

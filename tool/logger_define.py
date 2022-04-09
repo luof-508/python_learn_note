@@ -1,9 +1,14 @@
+#!/usr/bin/env python3
 # coding=utf-8
 
-__author__ = 'fg.luo'
+__author__ = 'f.l'
 
 import logging
 import os
+import pathlib
+
+
+log_path = pathlib.Path.joinpath(pathlib.Path(__file__).parent, 'logger_dir')
 
 
 class LoggerDefine:
@@ -41,7 +46,7 @@ class LoggerDefine:
         return _logger
 
     def _set_logger_file(self, _logger, fn):
-        logger_file = os.path.splitext(self.file)[0] + '.log'
+        logger_file = pathlib.Path(log_path)/(pathlib.Path(self.file).stem + '.log')
         f = logging.FileHandler(filename=logger_file)
         f.setLevel(self._level)
         f.setFormatter(fn)
