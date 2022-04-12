@@ -242,16 +242,16 @@ c = 1728871235648
 
 从打印结果可见：self就是调用者，就是c对应的实例对象；从打印顺序可见，实例化时调用了__init__。
 
-**4. 实例变量和类变量**  
+**5. 实例变量和类变量**  
 - **实例变量**是每一个实例自己的变量，是自己独有的；**类变量**是类的变量，是类的所有实例共享的
 属性和方法。
 
-**对象的特殊属性：**   
+**5.1 对象的特殊属性：**   
 |特殊属性|含义|说明  
-|:-:|:-:|:-:|  
+|:-:|:-:|:-|  
 |`__name__`| 对象名 |不一定每个对象都有这个属性。<br>`tom.__name__`报错<br>`AttributeError: 'Person' object has no attribute '__name__'`,<br>因为tom只是Person类的一个实例的引用，所以没有`__name__`  
 |`__class__`| 对象的类型|返回实例的对应的类  
-|`__dict__`| 对象的属性的字典|对象的所有属性，存在在一个字典中  
+|`__dict__`| 对象的属性的字典|对象的所有属性，保存存在字典中  
 |`__qualname__`|类的限定名|指类定义时，被绑定的ClassName。<br>只有类才有这个属性，类的实例没有。  
 ```python
 class Person(object):
@@ -304,7 +304,7 @@ True
 **结论：** 所有实例的操作方法都一样。所以对象(实例)的字典`__dict__`中没有必要保存方法，方法保存
 到类的`__dict__`就可以了。
 
-**实例属性的查找顺序**
+**5.2 实例属性的查找顺序**
 ```python
 class Person(object):
     """an example class"""
@@ -350,4 +350,80 @@ if __name__ == '__main__':
 3. 实例可以动态的给自己增加一个属性。例如：`tom.x=28`；通过`实例.__dict__[变量名]和实例.变量名`都可以访问属性。  
 4. 如果实例tom和类Person都具有同名属性age，则`tom.age`只会访问tom自己的属性。本质上是赋值即定义。  
 
-**约定：** 类变量使用全大写来命名。
+***约定：类变量使用全大写来命名。***
+
+### 4.4 装饰一个类  
+```python
+def set_name_property(name):
+    def _wrapped(fn):
+        print('wrapper {}'.format(fn))
+        fn.NAME = name
+        return fn
+    return _wrapped
+
+
+@set_name_property('My class')
+class Person:
+    age = 18
+
+    def __init__(self, age, name):
+        self.name = name
+        self.age = age
+
+    def __new__(cls, *args, **kwargs):
+        print('this is new')
+        return super().__new__(cls)
+
+    def show(self):
+        print(self.age, Person.age)
+
+
+if __name__ == '__main__':
+    tom = Person('tom', 20)
+    print("tom name = {}, Person's name = {}, Person's age = {}".format(
+        tom.name, tom.__class__.NAME, tom.__class__.__dict__['age']))
+```
+**执行结果：**
+>wrapper <class '__main__.Person'>  
+this is new  
+tom name = 20, Person's name = My class, Person's age = 18  
+
+**装饰一个类的作用：** 对于写好的模块，某些特定的场景缺少一个方法或属性，但是又不便于修改已经写好的项目，
+可以通过装饰器外部引用，为这个类Class增加需要的属性或方法后，再使用。**本质上是为类对象动态的添加一个属性。**
+
+***
+### 4.5 类方法和静态方法
+
+**1. 理解类方法调用过程：**
+```python
+class MyClass1:
+    def foo(self):
+        print('foo')
+
+    def bar():
+        print('bar')
+
+
+if __name__ == '__main__':
+    a = MyClass1()
+    a.foo()
+    MyClass1.bar()
+    print(MyClass1.__dict__)
+    # a.bar()  报错 TypeError: bar() takes 0 positional arguments but 1 was given
+
+```
+**执行结果：**  
+>foo  
+bar  
+{'__module__': '__main__', 'foo': <function MyClass.foo at 0x000002A6530A7160>, 
+> 'bar': <function MyClass.bar at 0x000002A6530A78B0>, 
+> '__dict__': <attribute '__dict__' of 'MyClass' objects>, 
+> '__weakref__': <attribute '__weakref__' of 'MyClass' objects>, '__doc__': None}  
+
+**调用过程本质：**  
+1. `a.foo()` 调用过程：类的实例a调用与a绑定的类方法foo，python内部将实例a作为位置参数self的实参传入。
+2. `MyClass.bar()`调用过程：MyClass从自己的属性`__dict__`中通过`key='bar'`调用function bar。
+3. `a.bar()`调用过程：类的实例a调用与a绑定的类方法bar，python内部将实例a作为实参传入，但是类方法bar没有
+任何形参，因此报`TypeError: bar() takes 0 positional arguments but 1 was given`。  
+
+**2. 类方法定义：装饰器`@classmethod`**
