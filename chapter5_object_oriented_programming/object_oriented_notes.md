@@ -247,11 +247,107 @@ c = 1728871235648
 属性和方法。
 
 **对象的特殊属性：**   
-|特殊属性|含义  
-|:-:|:-:|  
-|`__name__`| 对象名  
-|`__class__`| 对象的类型  
-|`__dict__`| 对象的属性的字典  
-|`__qualname__`|类的限定名  
+|特殊属性|含义|说明  
+|:-:|:-:|:-:|  
+|`__name__`| 对象名 |不一定每个对象都有这个属性。<br>`tom.__name__`报错<br>`AttributeError: 'Person' object has no attribute '__name__'`,<br>因为tom只是Person类的一个实例的引用，所以没有`__name__`  
+|`__class__`| 对象的类型|返回实例的对应的类  
+|`__dict__`| 对象的属性的字典|对象的所有属性，存在在一个字典中  
+|`__qualname__`|类的限定名|指类定义时，被绑定的ClassName。<br>只有类才有这个属性，类的实例没有。  
+```python
+class Person(object):
+    """an example class"""
+    x = 'abc'  # 类属性
+    age = 2
+    height = 160
+
+    def __init__(self, name, age=18):
+        self.name = name
+        self.y = age
+
+    def foo(self):  # 类属性foo，也是方法
+        # foo是类的方法，但是foo是一个标识符，只是标识符foo正好对应了这个函数实体，
+        # 定义一个函数之后，这个函数标识符会对应到创建出来的函数对象上，类方法foo本质也是这样一个过程。
+        return 'my Class'
+
+    def show(self, x, y):
+        print(self.name, self.x, x, y)
+        self.y = x  # 修改实例属性
+        Person.x = x  # 修改类属性
 
 
+if __name__ == '__main__':
+    tom = Person('Tom')  # 实例化、初始化
+    jerry = Person('Jerry')
+    # print(tom.__name__)  # tom只是Person类的一个实例的引用，所有没有__name__
+    print(tom.__class__, tom.__dict__, tom.__class__.__qualname__)
+    print(isinstance(jerry, tom.__class__))
+    print(tom.__class__, tom.__class__.__name__)
+    print(tom.__dict__)
+    print(Person.__dict__, Person.__class__)
+
+```
+**执行结果：**  
+>This is new  
+This is init  
+This is new  
+This is init  
+<class '__main__.Person'> {'name': 'Tom', 'y': 18} Person  
+True  
+<class '__main__.Person'> Person  
+{'name': 'Tom', 'y': 18}  
+{'__module__': '__main__', '__doc__': 'an example class', 'x': 'abc', <br>'age': 2, 'height': 160, '__init__': <function Person.__init__ at 0x00000216C2807160>, ...}
+
+**从执行结果可见：** 类属性保存在类的`__dict__`中，实例属性保存在实例的`__dict__`中。如果从实例
+访问类的属性，就要借助__class__找到所属的类。例如：实例tom访问类的属性x，
+`tom.__class__.__dict__['x']`。
+
+**结论：** 所有实例的操作方法都一样。所以对象(实例)的字典`__dict__`中没有必要保存方法，方法保存
+到类的`__dict__`就可以了。
+
+**实例属性的查找顺序**
+```python
+class Person(object):
+    """an example class"""
+    x = 'abc'  # 类属性
+    age = 2
+    height = 160
+
+    def __init__(self, name, age=18):
+        self.name = name
+        self.y = age
+
+    def foo(self):  # 类属性foo，也是方法
+        return 'my Class'
+
+    def show(self, x, y):
+        self.y = x  # 修改实例属性
+        Person.x = x  # 修改类属性
+
+
+if __name__ == '__main__':
+    tom = Person('Tom')  # 实例化、初始化
+    jerry = Person('Jerry')
+    Person.age = 30
+    print(Person.age, tom.age, jerry.age)
+    print(Person.height, tom.height, jerry.height)
+    Person.height += 20
+    print(Person.height, tom.height, jerry.height)
+    tom.height += 20
+    print(Person.height, tom.height, jerry.height)
+    jerry.height = 168
+    print(Person.height, tom.height, jerry.height)
+```
+**执行结果:**
+>30 30 30  
+160 160 160  
+180 180 180  
+180 200 180  
+180 200 168   
+
+**结论：**  
+1. 从执行结果可以推出实例属性的查找顺序：实例tom访问属性，会先找自己的`tom.__dic__`，如果没有，则通过属性`tom.__class__.__dict__`查找自己的类的属性。
+2. 如果实例tom通过`tom.__dict__[变量名]`访问属性，则不会按上述查找顺序查找，实例属性没有直接报错。  
+3. 实例可以动态的给自己增加一个属性。例如：`tom.x=28`；通过`实例.__dict__[变量名]和实例.变量名`都可以访问属性。  
+4. 如果实例tom和类Person都具有同名属性age，则`tom.age`只会访问tom自己的属性。本质上是赋值即定义。  
+
+**约定：** 类变量使用全大写来命名。
