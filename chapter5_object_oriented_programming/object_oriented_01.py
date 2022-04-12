@@ -12,6 +12,7 @@ class Person(object):
     """an example class"""
     x = 'abc'  # 类属性
     age = 2
+    height = 160
 
     def __init__(self, name, age=18):
         # __init__()方法不能有返回值，也就是只能是None
@@ -42,26 +43,40 @@ class Person(object):
 if __name__ == '__main__':
     tom = Person('Tom')  # 实例化、初始化
     jerry = Person('Jerry')
-    print(tom.foo)
-    print(tom.name, tom.age)
-    print(jerry.name, jerry.age)
-    print(Person.age)
+    # print(tom.foo)
+    # print(tom.name, tom.age)
+    # print(jerry.name, jerry.age)
+    # print(Person.age)
+    # Person.age = 30
+    # print(Person.age, tom.age, jerry.age)
+    # print('===' * 3)
+    # print(tom.__dict__)
+    # tom.age = 18
+    # print(Person.age, tom.age, jerry.age)
+    # print(tom.__dict__)
+    # print('-----------class-------')
+    # print(Person.__class__)
+    # print(sorted(Person.__dict__.items()), end='\n\n')
+    # print('------instance tom--------')
+    # print(tom.__class__)
+    # print(sorted(tom.__dict__.items()), end='\n\n')
+    # print("------tom's class--------")
+    # print(tom.__class__.__name__)
+    # print(sorted(tom.__class__.__dict__.items()), end='\n\n')
+    # print(tom.__name__)
+    # print(tom.__name__)  # tom只是Person类的一个实例的引用，所有没有__name__
+    # print(tom.__class__, tom.__dict__, tom.__class__.__qualname__)
+    # print(isinstance(jerry, tom.__class__))
+    # print(tom.__class__, tom.__class__.__name__)
+    # print(tom.__dict__)
+    # print(Person.__dict__, Person.__class__)
     Person.age = 30
     print(Person.age, tom.age, jerry.age)
-    print('===' * 3)
-    print(tom.__dict__)
-    tom.age = 18
-    print(Person.age, tom.age, jerry.age)
-    print(tom.__dict__)
-    print('-----------class-------')
-    print(Person.__class__)
-    print(sorted(Person.__dict__.items()), end='\n\n')
-    print('------instance tom--------')
-    print(tom.__class__)
-    print(sorted(tom.__dict__.items()), end='\n\n')
-    print("------tom's class--------")
-    print(tom.__class__.__name__)
-    print(sorted(tom.__class__.__dict__.items()), end='\n\n')
-
-
+    print(Person.height, tom.height, jerry.height)
+    Person.height += 20
+    print(Person.height, tom.height, jerry.height)
+    tom.height += 20
+    print(Person.height, tom.height, jerry.height)
+    jerry.height = 168
+    print(Person.height, tom.height, jerry.height)
 
