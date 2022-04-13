@@ -59,7 +59,7 @@
 - 通过继承父类，复用父类的方法和属性，就不用每次都重写需要的属性和方法，只需写新增的方法或需要修改的
 方法。
 - 多继承少修改，OCP(Open-Closed Principle)开闭原则。使用继承来改变，体现个性。比如杀马特类继承
-自人类，具有理发的方法，人类理发的方法都比较符合大众审美，但是杀马特类决定这个方法不好，自己要个性化，
+自人类，具有理发的方法，人类理发的方法都比较符合大众审美，但是杀马特类觉得这个方法不好，自己要个性化，
 这个时候就不能去修改人类的理发方法，而是在杀马特类重新定制自己的理发方法，避免影响其他继承自人类的类
 的理发方法。
 - 继承分为单一继承、多继承。
@@ -75,6 +75,7 @@
 ## 4 python的类
 
 ### 4.1 类定义
+**使用`class`关键字，类名使用大驼峰结构。示例：**
 ```python
 class MyClass:
     """A example class"""
@@ -85,16 +86,16 @@ class MyClass:
         # 定义一个函数之后，这个函数标识符会对应到创建出来的函数对象上，类方法foo本质也是这样一个过程。
         return 'My Class'
 ```
-类定义完成后，就产生了一个**类对象**，并绑定到了标识符ClassName上；类似函数定义完成后，这个函数
+类定义完成后，就产生了一个**类对象**，并绑定到了标识符`ClassName`上；类似函数定义完成后，这个函数
 就是函数对象。  
-**类对象**是指ClassName这个类，而**类的对象**是指类的实例，例如类的对象a:`a=ClassName()`。
+**类对象**是指`ClassName`这个类，而**类的对象**是指类的实例，例如类的对象a:`a=ClassName()`。
 所以，在python中一切皆对象。  
 
 ### 4.2 类对象及类属性  
-**类对象**：类定义完成后，就会生成一个类对象，并将这个对象绑定到标识符ClassName。  
-**类的属性**：类中定义的变量和类中定义的方法，都是类的属性。MyClass中，x、foo都是类的属性，
-__doc__也是类的属性。  
-**类变量**：x是类MyClass的变量  
+**类对象**：类定义完成后，就会生成一个类对象，并将这个对象绑定到标识符`ClassName`。  
+**类的属性**：类中定义的变量和类中定义的方法，都是类的属性。`MyClass`中，x、foo都是类的属性，
+`__doc__`也是类的属性。  
+**类变量**：x是类`MyClass`的变量  
 
 **注意：**
 1. foo方法是类的属性，如同**吃**是人类的方法，但是**每一个具体的人才能吃东西**，也就是说吃是人的
@@ -115,7 +116,7 @@ class Person:
         self.y = age
 
     def __new__(cls, *args, **kwargs):
-        pass
+        return super().__new__(cls)
 
     def foo(self):  # 类属性foo，也是方法
         # foo是类的方法，但是foo是一个标识符，只是标识符foo正好对应了这个函数实体，
@@ -251,7 +252,7 @@ c = 1728871235648
 |:-:|:-:|:-|  
 |`__name__`| 对象名 |不一定每个对象都有这个属性。<br>`tom.__name__`报错<br>`AttributeError: 'Person' object has no attribute '__name__'`,<br>因为tom只是Person类的一个实例的引用，所以没有`__name__`  
 |`__class__`| 对象的类型|返回实例的对应的类  
-|`__dict__`| 对象的属性的字典|对象的所有属性，保存存在字典中  
+|`__dict__`| 对象的属性的字典|对象的所有属性，保存在字典中  
 |`__qualname__`|类的限定名|指类定义时，被绑定的ClassName。<br>只有类才有这个属性，类的实例没有。  
 ```python
 class Person(object):
@@ -388,13 +389,19 @@ if __name__ == '__main__':
 this is new  
 tom name = 20, Person's name = My class, Person's age = 18  
 
-**装饰一个类的作用：** 对于写好的模块，某些特定的场景缺少一个方法或属性，但是又不便于修改已经写好的项目，
-可以通过装饰器外部引用，为这个类Class增加需要的属性或方法后，再使用。**本质上是为类对象动态的添加一个属性。**
+**装饰一个类的作用：** 对于写好的模块，某些特定的场景缺少一个方法或属性，但是又不便于修改已经写
+好的项目(OCP原则)，可以通过装饰器外部引用，为这个类Class增加需要的属性或方法后，再使用。
+**本质上是为类对象动态的添加一个属性。**  
+
+***带参装饰器---柯里化的应用***
 
 ***
-### 4.5 类方法和静态方法
+### 4.5 类方法和静态方法  
 
-**1. 理解类方法调用过程：**
+前述示例中，`__init__`等方法都是类的属性，第一个参数必须是self，而self必须指向一个对象，也就是类必须
+实例化之后，由实例来调用这个方法。  
+
+**1. 类属性的调用过程：**
 ```python
 class MyClass1:
     def foo(self):
@@ -420,10 +427,117 @@ bar
 > '__dict__': <attribute '__dict__' of 'MyClass' objects>, 
 > '__weakref__': <attribute '__weakref__' of 'MyClass' objects>, '__doc__': None}  
 
-**调用过程本质：**  
-1. `a.foo()` 调用过程：类的实例a调用与a绑定的类方法foo，python内部将实例a作为位置参数self的实参传入。
-2. `MyClass.bar()`调用过程：MyClass从自己的属性`__dict__`中通过`key='bar'`调用function bar。
-3. `a.bar()`调用过程：类的实例a调用与a绑定的类方法bar，python内部将实例a作为实参传入，但是类方法bar没有
-任何形参，因此报`TypeError: bar() takes 0 positional arguments but 1 was given`。  
+**调用过程理解：**  
+1. `a.foo()` 调用过程：实例a调用与a绑定的类属性foo，Python解释器将实例a作为位置参数self的实参传入。
+2. `MyClass.bar()`调用过程：MyClass可以理解为一个包含各种属性的名词空间，`bar`只是被MyClass
+这个名词空间管理的一个普通方法，从自己的属性`__dict__`中通过`key='bar'`调用普通方法bar。
+3. `a.bar()`调用过程：类的实例a通过`__class__.__dict__`找到类的属性bar，同时Python解释器将
+实例a作为实参传入，但是由于类属性bar第一个参数不是self，无法完成与实例a的绑定，导致无法调用，报
+`TypeError: bar() takes 0 positional arguments but 1 was given`。  
 
-**2. 类方法定义：装饰器`@classmethod`**
+**2. 类方法**
+* 在类中，使用`@classmethod`装饰器修饰的方法。类方法至少有一个参数，且第一个参数必须是cls，cls指
+类对象自身。cls和self一样，也只是一个标识符，可以是任意合法名称，默认都用cls。
+* 作用：**通过cls，直接操作类的属性，增加、修改类属性。**
+* Python的类方法，类似于C++、Java中的静态方法
+```python
+class Person:
+    age = 18
+
+    def get_age(self):
+        return self.age
+
+    @classmethod
+    def class_method(cls):
+        print("class = {0.__name__} ({0})".format(cls, cls))
+        # 通过cls操作类属性
+        cls.HEIGHT = 170
+        print(cls().get_age())
+
+
+if __name__ == '__main__':
+    Person.class_method()
+```
+**执行结果：**
+>class = Person (<class '__main__.Person'>)  
+18
+
+**3. 静态方法**  
+* 在类定义中，使用@staticmethod装饰器修饰的方法。
+* 调用静态方法时，Python解释器不会隐式的传入参数，静态方法相当于普通函数，只是被类这个名称空间组织管理。
+```python
+class Person:
+    age = 18
+
+    def get_age(self):
+        return self.age
+
+    @classmethod
+    def class_method(cls):
+        print("class = {0.__name__} ({0})".format(cls, cls))
+        # 通过cls操作类属性
+        cls.HEIGHT = 170
+        print(cls().get_age())
+
+    @staticmethod
+    def static_method():
+        print(Person.HEIGHT)
+
+
+
+if __name__ == '__main__':
+    Person.class_method()
+    Person.static_method()
+    print(Person.__dict__)
+```
+**执行结果：**
+>18  
+170  
+{'get_age': <function Person.get_age at 0x0000020523F47A60>, 
+'class_method': <classmethod object at 0x0000020523D09040>, 
+'static_method': <staticmethod object at 0x0000020523D09460>, ...}  
+
+**4. 方法的调用**
+**示例：**  
+```python
+class Person:
+    def normal_mtd():
+        # 虽然无语法问题，但是不要这样写，使用静态方法代替
+        print('normal')
+
+    def mtd(self):
+        print("{}'s method".format(self))
+
+    @classmethod
+    def class_mtd(cls):
+        print('class = {0.__name__} ({0})'.format(cls))
+        cls.HEIGHT = 170
+
+    @staticmethod
+    def static_mtd():
+        print(Person.HEIGHT)
+
+
+if __name__ == '__main__':
+    # 类调用
+    print('类调用')
+    print(1, Person.normal_mtd())  # 虽然无语法问题，但是不要这样写，使用静态方法代替
+    # print(2, Person.mtd())  # 调用普通方法
+    print(3, Person.class_mtd())  # 调用类方法
+    print(4, Person.static_mtd())  # 调用静态方法
+    # 实例调用
+    print('实例调用')
+    tom = Person()
+    # print(5, tom.normal_mtd())
+    print(6, tom.mtd())  # 调用普通方法
+    print(7, tom.class_mtd(), tom.__class__.class_mtd())  # 调用类方法  tom.mtd()等价于tom.__class__.class_mtd()
+    print(8, tom.static_mtd(), tom.__class__.static_mtd())  # 调用静态方法  tom.mtd()等价于tom.__class__.static_mtd()
+```
+**总结：**  
+- 类不能调用普通方法，因为普通方法第一个参数必须是类的实例。
+- 实例可以调用类中定义的所有方法；普通方法传入实例本身作为第一个参数， 静态方法和类方法本质是先调用`__class__`找到类，再调用方法；
+- `normal_mtd()`虽无语法错误，但不允许在类中这样定义。
+
+**5. 类方法、静态方法应用场景**  
+
+todo
