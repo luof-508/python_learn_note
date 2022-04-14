@@ -8,7 +8,7 @@
 
 
 def get_store(self):
-    return dict(chi=self.chinese, eng=self.english, his=self.history)
+    return dict(chi=self.__chinese, eng=self._english, his=self.__history)
 
 
 if __name__ == '__main__':

@@ -4,7 +4,9 @@
 @author: f.l
 @time: 2022/4/10
 @File: object_oriented_01.py
+一、类定义和类的实例化
 
+二、类属性和实例属性
 """
 
 
