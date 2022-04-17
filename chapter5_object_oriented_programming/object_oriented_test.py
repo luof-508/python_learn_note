@@ -5,13 +5,13 @@
 @time: 2022/4/15
 @File: object_oriented_test.py
 面向对象，如何设计类：
+    拿到一个需求，先分析怎么样合理分解成多少个对象，每一个对象设计哪些属性。合理使用类方法、静态方法，设计工具类。
 
 1、随机整数生成，可以指定一批生成的个数，可以指定数值的范围，可以调整每批生成数字的个数。
     one more:使用此类，随机生成20个数字，两两配对，形成二维坐标系的坐标，把这些坐标组织起来，并打印输出
 
 
 面向对象要解耦，结构化编程、模块化编程，每一个方法实现一个单一功能
-
 """
 import secrets
 
@@ -88,6 +88,75 @@ class CarInfo:
         pass
 
 
+class ConvertTemperature:
+    """摄氏度centigrade转换为华氏度Fahrenheit，华氏度转换为摄氏度"""
+    def __repr__(self):
+        """represent"""
+        pass
+
+    @classmethod
+    def fah_to_centi(cls, fah: float):
+        return "{:.2f}".format(5 * (fah - 32) / 9)
+
+    @classmethod
+    def centi_to_fah(cls, centi: float):
+        return "{:.2f}".format(9 * centi / 5 + 22)
+
+
+def centi_to_kelvin(centi: float):
+    return centi + 273.15
+
+
+# 模拟购物车购物
+# 购物车类，存放物品（及物品数量），结算功能(所有物品列表，计算总价)，
+# 物品类，存储物品名称、单价
+# 颜色类，工具，存放常量
+class ItemInfo:
+    """物品类，物品名称、单价、数量"""
+    def __init__(self, name, price, num):
+        self.name = name
+        self.price = price
+        self.num = num
+
+
+class Color:
+    RED = 0
+    BLUE = 1
+    GREEN = 2
+    GOLDEN = 3
+    BLACK = 4
+    OTHER = 1000
+
+
+class ShoppingCar:
+    """存储物品，修改物品数量，获取所有物品"""
+    def __init__(self):
+        self.necessary = dict()
+
+    def add_item(self, item: ItemInfo, num: int):
+        name = item.name
+        if self.necessary.get(name):
+            self.necessary[name].num += item.num
+        else:
+            self.necessary[name] = item
+
+    def decrease_item(self, name, num):
+        if num >= self.necessary[name].num:
+            self.necessary.pop(name)
+        else:
+            self.necessary[name].num -= num
+
+    def clear_items(self):
+        print('clear shopping car')
+        self.necessary.clear()
+
+    def settle_up(self):
+        ret = 0
+        for item in self.necessary:
+            ret += item.price * item.num
+        return ret
+
+
 if __name__ == '__main__':
     rg = RandomGenerator()
     print(rg.generator_int())
@@ -97,3 +166,10 @@ if __name__ == '__main__':
     # 打印方式二
     for p in lst:
         print(p.x, p.y)
+    # 温度转换
+    print(ConvertTemperature.centi_to_fah(36))
+    print(ConvertTemperature.__dict__)
+    ConvertTemperature.centi_to_kelvin = centi_to_kelvin
+    print(ConvertTemperature.__dict__)
+    print(ConvertTemperature.centi_to_kelvin(36))
+    # 模拟购物车
