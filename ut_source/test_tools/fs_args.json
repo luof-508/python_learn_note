@@ -1,0 +1,6 @@
+{
+  "float_ip": "192.168.2.6",
+  "passwd": "passwd",
+  "user": "user",
+  "driver_pkg_path": "test_tools/driver_version1.0.zip"
+}
