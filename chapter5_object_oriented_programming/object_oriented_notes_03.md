@@ -106,7 +106,7 @@ AttributeError: 'Garfield' object has no attribute '__get_weight'
 - 继承时，公有的，子类、实例都可以访问；而私有成员被隐藏，子类和实例不可以直接访问，例如：执行
 `print(cat.__COUNT)`时报`AttributeError: 'Garfield' object has no attribute '__COUNT'`错误，
 只有私有变量`__COUNT、self.__age、self.__weight`所在Animal类的方法才可以访问这个私有变量。
-- Dog类重写了初始化方法`__init__`，因此Dog类为继承父类的实例属性，只有重写的一个实例属性`{'_Dog__name': 'dog'}`
+- Dog类重写了初始化方法`__init__`，因此Dog类未继承父类的实例属性，只有重写初始化方法中定义的一个实例属性`{'_Dog__name': 'dog'}`
 - 属性的查找顺序：实例的`__dict__` ->类的`__dict__` -> 父类的`__dict__`，先找到立即返回，一直找到object类未找到抛异常。
 
 ### 11.1 方法重写override  
