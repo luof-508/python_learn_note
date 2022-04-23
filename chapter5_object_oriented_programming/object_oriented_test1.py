@@ -8,6 +8,7 @@ Mixin练习
 Shape基类，要求所有子类都提供面积的计算，子类三角形、矩形、圆。
 """
 import math
+import json
 
 
 class Shape:
@@ -20,6 +21,12 @@ def calculate_cycle_area(cls):
     return cls
 
 
+def serialization_data(cls):
+    cls.serialization_data = lambda self, param: json.dumps(self.__dict__[param])
+    return cls
+
+
+@serialization_data
 @calculate_cycle_area
 class Cycle(Shape):
     def __init__(self, radius):
