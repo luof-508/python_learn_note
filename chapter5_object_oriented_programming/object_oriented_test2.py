@@ -24,7 +24,7 @@
 
 
 class LinkedNode:
-    def __init__(self, info, next_seek, back_seek=None):
+    def __init__(self, info, next_seek=None, back_seek=None):
         self.info = info
         self.next_seek = next_seek
         self.back_seek = back_seek
@@ -32,6 +32,8 @@ class LinkedNode:
 
 class LinkedList:
     def __init__(self):
+        # 所谓的链表无序，是指链表的一个个节点在内存中存在任何地方，不是在堆栈中有序保存的，通过指针，指向下一个节点在内存中的位置。
+        # 这里的用列表只是一个容器，节点总要保存吧，与链表无序是两回事,而且列表保存的是链表的引用，只是一个个ID。
         self.__linked_list = []
 
     def append(self, node: LinkedNode):
@@ -39,8 +41,11 @@ class LinkedList:
             self.__linked_list[-1].next_seek = id(node)
         self.__linked_list.append(node)
 
-    def iter_nodes(self):
-        yield from self.__linked_list
+    def iter_nodes(self, reverse=False):
+        n = len(self.__linked_list)
+        while n > -1:
+            yield self.__linked_list[n]
+            n -= 1
 
 
 class DoubleLinkedList(LinkedList):
