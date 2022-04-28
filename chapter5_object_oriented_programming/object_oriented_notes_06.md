@@ -1,101 +1,15 @@
-#!/usr/bin/env python3
-# coding=utf-8
-"""
-@author: f.l
-@time: 2022/4/23
-@File: object_oriented_test2.py
-用面向对象实现链表LinkedList
-单向链表实现append,iter_nodes
-双向链表实现append,pop,insert,remove,iter_nodes
+# 需求：写一个双向链表，实现append,pop,insert,remove,iter_nodes，getitem功能
 
 
 ## 需求分析
 **根据链表结构特征进行抽象，需要设计两个类**：
 - 节点类：记录节点元素信息，包括节点value，节点指针seek，上一个节点和下一个节点位置
-- 容器类：保存每一个节点，记录链表头head、尾tail；因为数据在容器，因此还需在容器实现链表的增、闪、改、查。
+- 容器类：保存每一个节点，记录链表头head、尾tail；因为数据在容器，因此还需在容器实现链表的增、闪、改、查。  
 
 head、tail：记录起始、终止位置
-"""
 
-
-class LinkedNode:
-    def __init__(self, info, next_seek=None, front_seek=None):
-        self.info = info
-        self.next_seek = next_seek
-        self.front_seek = front_seek
-
-
-class LinkedList:
-    def __init__(self):
-        # 所谓的链表无序，是指链表的一个个节点在内存中存在任何地方，不是在堆栈中有序保存的，通过指针，指向下一个节点在内存中的位置。
-        # 这里的用列表只是一个容器，节点总要保存吧，与链表无序是两回事,而且列表保存的是链表的引用，只是一个个ID。
-        self.__linked_list = []  # 不需要插入的列表来说，检索方便，但是插入、remove不合适
-
-    def append(self, node: LinkedNode):
-        if self.__linked_list:
-            self.__linked_list[-1].next_seek = id(node)
-        self.__linked_list.append(node)
-
-    def iter_nodes(self, reverse=False):
-        n = len(self.__linked_list)
-        while n > -1:
-            yield self.__linked_list[n]
-            n -= 1
-
-
-class DoubleLinkedList(LinkedList):
-    """使用列表索引，暴力解法
-    优点：检索方便
-    缺点：对于频繁插入、remove的运用场景，效率太低，不合适"""
-    def __init__(self):
-        super(DoubleLinkedList, self).__init__()
-        self.__linked_list = []
-
-    def append(self, node: LinkedNode):
-        if self.__linked_list:
-            self.__linked_list[-1].next_seek = id(node)
-            node.front_seek = id(self.__linked_list[-1])
-        self.__linked_list.append(node)
-
-    def pop(self, node_seek):
-        node_idx = None
-        for idx, cur_node in enumerate(self.__linked_list):
-            if id(cur_node) == node_seek:
-                node_idx = idx
-                break
-        # todo 考虑起点、终点、以及节点不存在情况
-        back_node = self.__linked_list[node_idx-1]
-        next_node = self.__linked_list[node_idx + 1]
-        back_node.next_seek = id(next_node)
-        next_node.front_seek = id(back_node)
-        return self.__linked_list.pop(node_idx)
-
-    def remove(self, node: LinkedNode):
-        node_id = id(LinkedNode)
-        for idx, cur_node in enumerate(self.__linked_list):
-            if id(cur_node) == node_id:
-                # todo 考虑起点、终点、以及节点不存在情况
-                self.__linked_list[idx-1].next_seek = id(self.__linked_list[idx+1])
-                self.__linked_list[idx+1].front_seek = id(self.__linked_list[idx - 1])
-                break
-        return self.__linked_list.remove(node)
-
-    def insert(self, node: LinkedNode, insert_seek):
-        node_id = id(LinkedNode)
-        insert_idx = None
-        for idx, cur_node in enumerate(self.__linked_list):
-            if id(cur_node) == insert_seek:
-                # todo 考虑起点、终点、以及节点不存在情况
-                insert_idx = idx+1
-                self.__linked_list[idx].next_seek = node_id
-                self.__linked_list[idx+1].front_seek = node_id
-                node.front_seek = id(self.__linked_list[idx])
-                node.next_seek = id(self.__linked_list[idx+1])
-                break
-        self.__linked_list.insert(insert_idx, node)
-
-
-# 不带列表解法
+## 代码实现
+```python
 class Item:
     def __init__(self, val, next_node=None, front_node=None):
         self.val = val
@@ -221,6 +135,7 @@ class LinkedListImprove:
 
 
 if __name__ == '__main__':
+    # 测试
     lst = LinkedListImprove()
     item = Item('start')
     lst.append(item)
@@ -266,4 +181,4 @@ if __name__ == '__main__':
     for n in lst.iter_items():
         print(n)
     print('~~~~~~~~~~~~~~~~~~~~~')
-
+```
