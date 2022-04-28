@@ -13,7 +13,7 @@ class MyFlatMethod(object):
         self.destination = {}
 
     def primary_method(self, dic, key=''):
-        for k, v in dic.items():
+        for k, v in dic.__items():
             if isinstance(v, dict):
                 self.primary_method(v, key=key+k+'.')  # 递归调用
             else:
@@ -22,7 +22,7 @@ class MyFlatMethod(object):
     def prove_method(self, dic, dst=None, key=''):
         if dst is None:
             dst = {}
-        for k, v in dic.items():
+        for k, v in dic.__items():
             if isinstance(v, dict):
                 self.prove_method(v, dst, key=key+k+'.')
             else:
@@ -31,7 +31,7 @@ class MyFlatMethod(object):
 
     def flat_map(self, src):
         def _flatmap(src1, dst1=None, key=''):
-            for k, v in src1.items():
+            for k, v in src1.__items():
                 if isinstance(v, dict):
                     _flatmap(v, dst1, key=key+k+".")
                 else:
