@@ -103,7 +103,7 @@ def lru_cache_demo(duration=3):
             used_default_args = dict()
             for k, v in parameter_lst:
                 used_default_args[k] = v.default
-            for k, _ in kwargs.items():
+            for k, _ in kwargs.__items():
                 used_default_args.pop(k)
             if used_default_args:
                 key += tuple(used_default_args.values())
