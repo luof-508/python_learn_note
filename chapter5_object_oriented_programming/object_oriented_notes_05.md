@@ -12,6 +12,8 @@
 |`__mro__`|类的mro，多继承的属性查找顺序|class.mro()返回的结果保存在`__mro__`中  
 |`__dict__`|类或实例的属性，可读写的字典  
 |`__class__`|对象或类的所属类  
+|`__doc__`|类或函数的文档字符串，如果没有定义则为None|  
+
 
 ### 13.2 查看属性dir()  
 |方法|意义|  
@@ -83,6 +85,8 @@ python存放相关属性用字典管理`__dict__`，从而建立了一个名称�
 实例构建完之后，马上进行初始化`__init__`，因为`__new__`只是照着类模板构建了实例，但是实例还没有自己个性化的属性，怎么办，添呗，
 就用初始化函数`__init__`， 把个性化的东西放在实例的`__dict__`中，方便查阅，实际上在内存中也是散落的。
 
+**注意：** 初始化函数`__init__`如果要return，只能return None  
+
 
 #### 13.3.2 hash与去重：`__hash__ ` 
 |名称|含义|说明|  
@@ -144,7 +148,7 @@ False
 - 通过list的原码可知，设计不可hash对象，定义对象属性`__hash__ = None`即可
 - `__hash__`方法只是返回一个hash值作为set或者dict的key，可hash对象必须提供`__hash__`方法
 - 判断一个对象是否可hash，使用`collections.Hashable`。例如：`isinstance(a, Hashable)`。
-- python实现二元操作符等价为一个方法的原理就是利用`__eq__`，如操作符`==`:`print(a==b) # 等价于a.__eq__(b)`  
+- python实现二元操作符等价为一个方法的原理就是利用`__eq__`等魔术方法，如操作符`==`:`print(a==b) # 等价于a.__eq__(b)`  
 - hash：hash散列，如MD5。**hash一般用在缓存的时候，提高检索或查询的速度。时间复杂度0(1)。**
 
 #### 13.3.3 布尔：`__bool__`  
@@ -295,7 +299,7 @@ class A:
 |方法|含义|  
 |:-:|:-|  
 |`__len__`|长度。内建函数len(obj)，调用的就是`obj.__len__()`。如果没有提供将抛错，其实就是把对象当做容器类型看，就如同list或dict。bool()函数调用的时候，如果没有`__bool__`，就会看有没有`__len__`。注意有些第三方库len和size不是一个动作，size指的是内存中有多少个格子存放东西，而len才指元素的个数。  
-|`__liter__`|迭代。迭代容器时调用，返回一个新的迭代器对象。因此给出`__liter__`时，必须return一个迭代器。迭代很重要，很多时候，关心的容器能不能迭代，有没有我想要的东西在里面。|  
+|`__iter__`|迭代。迭代容器时调用，返回一个新的迭代器对象。因此给出`__iter__`时，必须return一个迭代器。迭代很重要，很多时候，关心的容器能不能迭代，有没有我想要的东西在里面。|  
 |`__contains__`|in成员运算符。不同容器有不同实现方法，比如列表，就一个一个找，字典求hash速度很快；所以可以不提供，不提供就调用`__iter__`方法遍历。|  
 |`__getitem__`|实现`self[key]`访问。注意不仅限于dict，不要被key迷惑，列表，元组都可以，这个时候key就是索引。所以：对于序列对象(例如购物车类Cart),key接受整数为索引，或者切片(可见，切片调用的就是`__getitem__`)；对于set或dict，key为hashable。key不存在引发keyError异常。|  
 |`__setitem__`|与`__getitem__`类似，就是根据中括号给的索引或者给的key，然后找到置，把值塞进去。对于序列对象key超界，引发IndexError。|  
@@ -398,7 +402,7 @@ if __name__ == '__main__':
 **示例小结：** 通过类及魔术方法实现斐波那契数量，实现缓存，便于检索  
 
 
-#### 13.3.8 可调用对象上下文管理：`__enter__`，`__exit__`：
+#### 13.3.8 上下文管理`__enter__`，`__exit__`
 文件IO操作可以使用`with...as`语法对文件对象进行上下文管理。python通过魔术方法，将类实现得较为复杂，但是使用者用着特别方便，比如可以把一个自定义类变成上下。
 |方法|意义|说明|    
 |:-:|:-:|:-|  
@@ -558,3 +562,278 @@ Context wrapper: __exit__, exit time=0.500204
 1. 增强功能：在代码执行前后增加代码，以增强功能。类似装饰器的功能
 2. 资源管理：打开了资源需要关闭，例如文件对象、网络连接、数据库连接等
 3. 权限验证：在执行代码之前，做权限验证，在`__enter__`中处理
+
+
+#### 13.3.9 `@contextlib.contextmanager`装饰器  
+
+对于只生成器函数，且只yield 1个值时，可使用contextmanager装饰器，实现上下文管理，将yield返回值与as子句后面的变量绑定，并执行完yield后面的函数语句
+```python
+import contextlib
+
+
+@contextlib.contextmanager  # 不使用此装饰器时，不会执行exit函数语句
+def foo():
+    print('enter')
+    yield 123
+    print('exit')  # 异常情况，不能保证exit语句执行，使用try...finally语句
+
+
+def foo1():
+    print('enter')
+    try:
+        yield 123
+    finally:
+        print('exit')  
+
+
+@contextlib.contextmanager
+def foo2():
+    for i in range(3):  # yield不止1个值时，将抛RuntimeError: generator didn't stop异常
+        yield i
+
+
+if __name__ == '__main__':
+    # next(foo())
+    with foo() as f:
+        print(f)
+
+    with foo2() as f:
+        print(f)
+```
+**小结：** 对于业务逻辑较为复杂的场景，直接使用`__enter__`、`__exit__`方法更可靠。  
+
+#### 13.3.10 `@functools.total_ordering`装饰器  
+
+比较运算符`<、>、<=、>=`如果每一个都在类中实现太麻烦了，通过total＿ordering装饰器，只需要在类中实现`<、>、<=、>=`中的任意一个，即可进行实例的相关比较。
+```python
+import functools
+
+
+@functools.total_ordering
+class A:
+    def __init__(self, x):
+        self.x = x
+
+    def __eq__(self, other):
+        return self.x == other.x
+
+    def __gt__(self, other):
+        return self.x > other.x
+
+
+if __name__ == '__main__':
+    a1 = A(3)
+    a2 = A(4)
+    a3 = A(3)
+    print(a1 == a2)
+    print(a1 > a2)
+    print(a1 <= a2)
+    print(a1 == a3)
+```
+**小结**：
+- 从执行示例可以看出：注释`__eq__`方法后，`a1==a2`返回值为false，与预期不符。这与前述去重吻合：当没有给出`__eq__`时，判断例是否相等，默认比较内存中的id。  
+- 所以`==`必须单独实现，否则比较结果不准确  
+
+
+#### 13.3.11 反射  
+概念：**运行时**，指程序被加载到内存中执行的时候。区别于编译时。
+**反射**：reflection，指运行时获取类型定义信息。一个对象能够在运行时，像照镜子一样，反射出其类型信息就是反射。简单的说，在python中，能够通过一个对象，找出其type、class、attribute或method的能力，称为反射。
+例如：Point类的实例p，通过反射能力，在`p.__dict__`中找到自己的attribute，并且修改、增加自己的attribute。**通过`__dict__`获取、修改属性不优雅，python提供了内建函数：**  
+|方法|意义|说明|    
+|:-:|:-:|:-|  
+|`getattr(object, name[, default])`|通过name返回 object的属性值。属性不存在返回default，如果没有给出default，抛AttributeError。|注意，name必须为字符串类型；<br>getattr搜索顺序，遵从mro搜索顺序，先从自己的`__dict__`中找，然后找class的...|  
+|`setattr(object, name, value)`|object的属性存在则覆盖，不存在新增。|注意：object为类则新增类属性，为实例则新增实例性。<br>--动态增加属性，未绑定。增加到实例，则在实例的__dict__中。|  
+|hasattr(object, name)|判断对象是否有这个名字的属性|name必须为字符串类型  
+
+```python
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+if __name__ == '__main__':
+    p = Point(2, 3)
+    # 运用对象的反射能力，在`p.__dict__`中找到自己的attribute，并且修改、增加自己的attribute
+    print(p.__dict__)
+    p.__dict__['x'] = 3
+    p.z = 12
+    print(p.__dict__)
+    # 通过反射能力，在`p.__dict__`中找到自己的attribute，并且修改、增加自己的attribute
+    setattr(Point, 't', 14)
+    print(p.__dict__)
+    print(getattr(p, 't'))
+    if not hasattr(p, 'lab'):
+        setattr(p, 'lab', lambda x: print(x))
+        setattr(Point, 'lab1', lambda self: print('lab1'))
+    print(p.__dict__)
+    print(Point.__dict__)
+    p.lab('lab')
+    p.lab1()
+```
+**执行结果**: 
+>{'x': 2, 'y': 3}  
+{'x': 3, 'y': 3, 'z': 12}  
+{'x': 3, 'y': 3, 'z': 12}  
+14  
+{'x': 3, 'y': 3, 'z': 12, 'lab': <function <lambda> at 0x000001D3B1129430>}  
+{'__module__': '__main__', '__init__': <function Point.__init__ at 0x000001D3B1129160>, '__dict__': <attribute '__dict__' of 'Point' objects>, '__weakref__': <attribute '__weakref__' of 'Point' objects>, '__doc__': None, 't': 14, 'lab1': <function <lambda> at 0x000001D3B1129940>}  
+lab  
+lab1  
+
+**小结**：动态增加属性的方式，和装饰器修饰一个类、Mixin方式的差异在于，Mixin和装饰器在编译时就决定了；而动态增、删属性的方式是运用反射能力，运行时改变类或实例的属性，更灵活。
+**练习：** 通过`getattr/setattr/hasattr`改造命令分发器
+```python
+class Dispatcher:
+    def reg(self, cmd: str, fn):
+        if not hasattr(self, cmd):
+            setattr(self.__class__, cmd, fn)
+        else:
+            raise Exception('Exist')
+
+    def run(self):
+        while True:
+            cmd = input('enter:')
+            if cmd == 'q':
+                return
+            getattr(self, cmd, self.default_func)()
+
+    @classmethod
+    def default_func(cls):
+        print('default')
+
+
+if __name__ == '__main__':
+    dis = Dispatcher()
+    dis.reg('cmd1', lambda self: print('cmd1'))
+    dis.reg('cmd2', lambda self: print('cmd2'))
+    dis.run()
+```
+
+
+**反射相关的魔术方法：`__getattr__、__setattr__、__hasattr__`**  
+|方法|意义|说明|    
+|:-:|:-:|:-|  
+|`__getattr__`|当通过搜索实例、实例的类及祖先类查找不到属性时，就会调用此方法；如果没有这个方法，就会抛AttributeError异常  
+|`__setattr__`|通过`obj.x`行增加、修改实例的属性都要调用`__setattr__`，包括初始化函数中的实例属性赋值  
+|`__delattr__`|通过实例来删除属性时调用此方法，可以阻止通过实例删除属性的操作。但是通过类依然可以删除属性  
+|`__getattribute__`|实例所有的属性调用都从这个方法开始，它阻止了属性的查找；该方法应该返回一个值或者抛出AttributeError.<br>如果return值，则作为属性的查找结果；如果抛出AttributeError，则会直接调用`__getattr__`方法，表示没有找到属性。<br>除非明确知道`__getattribute__`用来做什么，否则不要使用此方法  
+
+
+**示例1：**
+```python
+class Base:
+    n = 0
+
+
+class Point(Base):
+    z = 6
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __getattr__(self, item):
+        return 'missing {}'.format(item)
+
+    def __setattr__(self, key, value):
+        print('setattr')
+        # self.__dict__[key] = value
+
+
+if __name__ == '__main__':
+    p1 = Point(1, 2)
+    print(p1.x)
+    print(p1.z)
+    print(p1.n)
+    print(p1.t)  # missing t
+```
+**执行结果：**
+>setattr  
+setattr  
+missing x  
+6  
+0  
+missing t  
+
+**小结：** 
+- 示例中给出了`__setattr__`方法，因此在类初始化时，设置实例属性调用了此方法，但是`__setattr__`中没有完成实例`__dict__`的操作，所以实例`__dict__`没有属性x、y；通过`p1.x`访问实例属性x，才调用了` __getattr__`。
+- 因此：`__setattr__`方法，可以拦截对实例属性的增加、修改操作；如果给出了这个方法，要想增加、修改实例属性生效，必须在方法中实现`__dict__`操作。  
+
+**示例2：**
+```python
+class P:
+    Z = 4
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __delattr__(self, item):
+        print('can not delete {}'.format(item))
+
+
+if __name__ == '__main__':
+    p2 = P(4, 5)
+    del p2.x
+    p2.z = 13
+    del p2.z
+    del p2.Z
+    print(p2.__dict__)
+    print(P.__dict__)
+    del P.Z
+    print(P.__dict__)
+```
+**执行结果：**
+>can not delete x  
+can not delete z  
+can not delete Z  
+{'x': 4, 'y': 5, 'z': 13}  
+{'__module__': '__main__', 'Z': 4, ...}
+{'__module__': '__main__', '__init__': <function P.__init__ at 0x000002349845DAF0>, ...}
+
+**小结：** `__delattr__`方法，可以阻止通过实例删除属性的操作。但是通过类依然可以删除属性。
+
+**示例3：**
+```python
+class Base:
+    n = 0
+
+    
+class C(Base):
+    C = 8
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __getattr__(self, item):
+        return 'missing {}'.format(item)
+
+    def __getattribute__(self, item):
+        # raise AttributeError
+        return 'getattribute:{}'.format(item)
+
+
+if __name__ == '__main__':
+    c = C(3, 4)
+    print(c.__dict__)
+    print(c.x)
+    print(c.c)
+    print(c.n)
+    print(C.__dict__)
+    print(C.C)
+```
+**执行结果：**
+>getattribute:__dict__  
+getattribute:x  
+getattribute:c  
+getattribute:n  
+{'__module__': '__main__', 'C': 8, '__init__': <function C.__init__ at 0x00000177F7A1DCA0>, '__getattr__': <function C.__getattr__ at 0x00000177F7A1DD30>, '__getattribute__': <function C.__getattribute__ at 0x00000177F7A1DDC0>, '__doc__': None}  
+8  
+
+**小结：**
+- 实例的所有属性访问，第一个都会调用`__getattribute__`方法，它阻止了属性的查找；该方法应该返回一个值或者抛出AttributeError.如果return值，则作为属性的查找结果；如果抛出AttributeError，则会直接调用`__getattr__`方法，表示没有找到属性。
+- 除非明确知道`__getattribute__`用来做什么，否则不要使用此方法
+
+**总结：** 属性的查找顺序：实例调用`__getattribute__() -> instance.__dict__ -> instance.__class__.__dict__ -> 继承的祖先类的__dict__ ->调用__getattr__()`
