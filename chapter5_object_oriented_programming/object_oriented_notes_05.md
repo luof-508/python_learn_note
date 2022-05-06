@@ -837,3 +837,171 @@ getattribute:n
 - 除非明确知道`__getattribute__`用来做什么，否则不要使用此方法
 
 **总结：** 属性的查找顺序：实例调用`__getattribute__() -> instance.__dict__ -> instance.__class__.__dict__ -> 继承的祖先类的__dict__ ->调用__getattr__()`
+
+
+#### 13.3.12 描述器：`__get__、__set__、__delete__`
+
+**描述器：** 当类的定义中实现了`__get__、__set__、__delete__`三个魔术方法中的任意一个时，那么这个类就是一个描述器
+- 当仅实现了`__get__`，称为**非数据描述器non data descriptor**;
+- 当同时实现了`__get__` + `__set＿`或`__delete__`就是**数据描述器data descriptor**  
+
+**owner属主：** 如果一个类的类属性包含描述器，那么这个类称为owner属主
+
+常见的数据描述器：property
+
+
+1. 描述器通过`__get__`方法，对类的实例读取类属性的控制：
+
+`__get___(self, instance, owner)`方法:  
+- instance：属主的实例，当通过类B的实例b读取属性x时，解释器自动传入b和B
+- owner：属主，当通过类B读取属性x时，instance为None，只传入B  
+
+**示例：**
+```python
+class A:
+    AA = 'aa'
+
+    def __init__(self):
+        print('A.init')
+        self.a1 = 'a1'
+
+    def __get__(self, instance, owner):
+        print('A:__get__', self, instance, owner)
+        return self  # 通常return self
+
+
+class B:
+    x = A()
+
+    def __init__(self):
+        print('B.init')
+        # self.x = 100
+        self.y = A()
+
+        
+if __name__ == '__main__':
+    print(B.x)
+    print(B.x.AA)  # 通过类B读取类属性x，因为x是一个描述器，触发__get__
+    print('~~~~~~~~~~')
+    b = B()
+    print(b.x.AA)  # 通过类B的实例b读取类属性x，因为x是一个描述器，触发__get__
+    print('~~~~~~~~~~')
+    print(b.y.a1)  # 通过实例属性访问类A的实例的属性，不会触发__get__
+```
+**小结：**  
+- 当类A的实例x是类B的属性时，如果类A中给出了`__get__`方法，则对类B属性x的读取（不管是通过B的实例或B），或者进一步通过属性x访问类A的属性，将会触发`__get__`方法；
+- 当类A的实例是类B的实例属性，通过类B的实例属性访问类A的实例的属性的时候，不会触发`__get__`方法
+
+2. 数据描述器通过`__set__`或者`__delete__`方法，对类的实例修改类属性的控制：
+**示例：**
+```python
+class C:
+    CC = 'cc'
+
+    def __init__(self):
+        print('C.init')
+        self.c1 = 'c1'
+
+    def __get__(self, instance, owner):
+        print('C:__get__', self, instance, owner)
+        return self  # 通常return self
+
+    def __set__(self, instance, value):
+        print('C:__set__', self, instance, value)
+
+
+class D:
+    x = C()
+
+    def __init__(self):
+        print('D.init')
+        self.x = 100
+        self.y = 123
+
+
+if __name__ == '__main__':
+    print('-----------')
+    print(D.x)
+    d = D()
+    print(d.__dict__)  # 查看实例d的__dict__是否有属性x
+    print(D.__dict__)
+    print('~~~~~~~~~~~~~~')
+    print(d.x)
+    d.x = 100    # 尝试为实例d增加属性x
+    print(d.x)   # 查看‘赋值即定义’是否可以增加实例属性x。从结果可以看出，由于类属性x是数据描述器，由于受数据描述器拦截，无法给实例d的__dict__写入x,即增加x属性。
+    print(d.__dict__)
+    print('~~~~~~~~~~~~~')
+```
+**小结**： 
+- 当类D中的类属性x为数据描述器时，则对类D的实例d进行访问、修改属性x操作时（d.x或d.x=100），数据描述器的`__dict__`优先实例的`__dict__`。
+- 所以，**一但类属性x为数据描述器，则实例b只能操作类属性x，无标识符为x的实例属性**；而操作类属性x又受描述器控制，才会有`d.x=100`时触发了数据描述器的`__set__`方法，有点像运算符重载`d.x=100 -> d.x.__set__(d, 100)`。
+- 本质上：数据描述器`d.x=100 -> d.__getattribute__ -> d.x.__set__`，还没有走到写`d.__dict__`的操作，所以操作`d.x`的时候，从自己的`__dict__`中找不到x，就找类的，而类属性x又是一个描述器，进而触发了`__get__`.
+
+**总结：** python的方法都实现为非数据描述器（例如staticmethod、classmethod），因此实例可以重新定义和覆盖方法，这允许单个实例可以获取与同一类的其他实例不同的行为。property函数实现为一个数据描述器，因此实例不能覆盖属性的行为
+**示例：**
+```python
+class E:
+    
+    @classmethod
+    def foo(cls):
+        pass
+    
+    @staticmethod
+    def bar():
+        pass
+    
+    @property
+    def z(self):
+        return 2
+    
+    def __init__(self):
+        self.foo = 100  # foo和、bar方法都为非数据描述器，所以可以直接赋值修改
+        self.bar = 123
+        self.z = 'z'  # z方法为数据描述器，不能在实例中替换
+```
+
+**练习：实现classmethod和staticmethod**
+```python
+import functools
+
+
+class ClassMethod:
+    def __init__(self, fn):
+        print(fn)
+        self._fn = fn
+
+    def __get__(self, instance, owner):
+        print(self, instance, owner)
+        # return self._fn(owner)
+        return functools.partial(self._fn, owner)
+
+
+class StaticMethod:
+    def __init__(self, fn):
+        print(fn)
+        self._fn = fn
+
+    def __get__(self, instance, owner):
+        print(self, instance, owner)
+        return self._fn
+
+
+class A:
+
+    @StaticMethod  
+    def foo():
+        print('static')
+
+    @ClassMethod  # foo = ClassMethod(foo) -> 新的foo是类ClassMethod的实例， 而ClassMethod非数据描述器，故通过A.foo读取类属性foo时，触发调用__get__，而__get__返回的是固定了参数cls的新的foo。所有最后可以直接foo()执行函数。
+    def bar(cls):
+        print(cls.__name__)
+
+
+if __name__ == '__main__':
+    f = A.foo
+    print(f)
+    f()
+    b = A.bar
+    print(b)
+    b()
+```
