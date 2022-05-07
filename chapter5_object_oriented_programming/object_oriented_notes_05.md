@@ -715,7 +715,7 @@ if __name__ == '__main__':
 |方法|意义|说明|    
 |:-:|:-:|:-|  
 |`__getattr__`|当通过搜索实例、实例的类及祖先类查找不到属性时，就会调用此方法；如果没有这个方法，就会抛AttributeError异常  
-|`__setattr__`|通过`obj.x`行增加、修改实例的属性都要调用`__setattr__`，包括初始化函数中的实例属性赋值  
+|`__setattr__`|通过`obj.x=100`方式增加、修改实例的属性都要调用`__setattr__`，包括初始化函数中的实例属性赋值  
 |`__delattr__`|通过实例来删除属性时调用此方法，可以阻止通过实例删除属性的操作。但是通过类依然可以删除属性  
 |`__getattribute__`|实例所有的属性调用都从这个方法开始，它阻止了属性的查找；该方法应该返回一个值或者抛出AttributeError.<br>如果return值，则作为属性的查找结果；如果抛出AttributeError，则会直接调用`__getattr__`方法，表示没有找到属性。<br>除非明确知道`__getattribute__`用来做什么，否则不要使用此方法  
 
@@ -837,3 +837,171 @@ getattribute:n
 - 除非明确知道`__getattribute__`用来做什么，否则不要使用此方法
 
 **总结：** 属性的查找顺序：实例调用`__getattribute__() -> instance.__dict__ -> instance.__class__.__dict__ -> 继承的祖先类的__dict__ ->调用__getattr__()`
+
+
+#### 13.3.12 描述器：`__get__、__set__、__delete__`
+
+**描述器：** 当类的定义中实现了`__get__、__set__、__delete__`三个魔术方法中的任意一个时，那么这个类就是一个描述器
+- 当仅实现了`__get__`，称为**非数据描述器non data descriptor**;
+- 当同时实现了`__get__` + `__set＿`或`__delete__`就是**数据描述器data descriptor**  
+
+**owner属主：** 如果一个类的类属性包含描述器，那么这个类称为owner属主
+
+常见的数据描述器：property
+
+
+1. 描述器通过`__get__`方法，对类的实例读取类属性的控制：
+
+`__get___(self, instance, owner)`方法:  
+- instance：属主的实例，当通过类B的实例b读取属性x时，解释器自动传入b和B
+- owner：属主，当通过类B读取属性x时，instance为None，只传入B  
+
+**示例：**
+```python
+class A:
+    AA = 'aa'
+
+    def __init__(self):
+        print('A.init')
+        self.a1 = 'a1'
+
+    def __get__(self, instance, owner):
+        print('A:__get__', self, instance, owner)
+        return self  # 通常return self
+
+
+class B:
+    x = A()
+
+    def __init__(self):
+        print('B.init')
+        # self.x = 100
+        self.y = A()
+
+        
+if __name__ == '__main__':
+    print(B.x)
+    print(B.x.AA)  # 通过类B读取类属性x，因为x是一个描述器，触发__get__
+    print('~~~~~~~~~~')
+    b = B()
+    print(b.x.AA)  # 通过类B的实例b读取类属性x，因为x是一个描述器，触发__get__
+    print('~~~~~~~~~~')
+    print(b.y.a1)  # 通过实例属性访问类A的实例的属性，不会触发__get__
+```
+**小结：**  
+- 当类A的实例x是类B的属性时，如果类A中给出了`__get__`方法，则对类B属性x的读取（不管是通过B的实例或B），或者进一步通过属性x访问类A的属性，都会触发`__get__`方法；所以一般`__get__`方法返回self。
+- 当类A的实例是类B的实例的属性时，通过类B的实例属性访问类A的实例的属性的时候，不会触发`__get__`方法
+
+2. 数据描述器通过`__set__`或者`__delete__`方法，对类的实例修改类属性的控制：
+**示例：**
+```python
+class C:
+    CC = 'cc'
+
+    def __init__(self):
+        print('C.init')
+        self.c1 = 'c1'
+
+    def __get__(self, instance, owner):
+        print('C:__get__', self, instance, owner)
+        return self  # 通常return self
+
+    def __set__(self, instance, value):
+        print('C:__set__', self, instance, value)
+
+
+class D:
+    x = C()
+
+    def __init__(self):
+        print('D.init')
+        self.x = 100
+        self.y = 123
+
+
+if __name__ == '__main__':
+    print('-----------')
+    print(D.x)
+    d = D()
+    print(d.__dict__)  # 查看实例d的__dict__是否有属性x
+    print(D.__dict__)
+    print('~~~~~~~~~~~~~~')
+    print(d.x)
+    d.x = 100    # 尝试为实例d增加属性x
+    print(d.x)   # 查看‘赋值即定义’是否可以增加实例属性x。从结果可以看出，由于类属性x是数据描述器，由于受数据描述器拦截，无法给实例d的__dict__写入x,即增加x属性。
+    print(d.__dict__)
+    print('~~~~~~~~~~~~~')
+```
+**小结**： 
+- 当类D中存在一个标识符为x的类属性，且这个属性x为数据描述器时，则这个类属性x在类D的__dict__的优先级高于类D的实例__dict__的优先级；即通过类D的实例d进行访问、修改属性x操作时（d.x或d.x=100），优先访问`D.__dict__`。
+- 所以，**一但类属性x为数据描述器，则实例b只能操作类属性x，无标识符为x的实例属性**；而操作类属性x又受描述器控制，才会有`d.x=100`时触发了数据描述器的`__set__`方法，有点像运算符重载`d.x=100 -> d.x.__set__(d, 100)`。
+- 本质上：数据描述器`d.x=100 -> d.__dict__.get(x) -> d.__dict__没有x，继续找类的__dict_ ->d.__class__.__dict__[x] -> 找到了，但是x是描述器，类似运算符重载 -> d.__class__.__dict__[x].__set__()`，走不到写`d.__dict__`的操作；`d.x`也是一样，从自己的`__dict__`中找不到x，就找类的，而类属性x又是一个描述器，进而触发了`__get__`.
+
+**总结：** python的方法几乎都实现为非数据描述器（例如staticmethod、classmethod），因此实例可以重新定义一个标识符与类属性一样的实例属性，从而允许单个实例可以获得与同一类的其他实例不同的行为。property函数实现为一个数据描述器，因此被property装饰的类属性z，实例无法定义一个同为标识符z的实例属性。
+**示例：**
+```python
+class E:
+    
+    @classmethod
+    def foo(cls):
+        pass
+    
+    @staticmethod
+    def bar():
+        pass
+    
+    @property
+    def z(self):
+        return 2
+    
+    def __init__(self):
+        self.foo = 100  # foo和、bar方法都为非数据描述器，所以可以直接赋值修改
+        self.bar = 123
+        self.z = 'z'  # z方法为数据描述器，不能在实例中替换
+```
+
+**练习：实现classmethod和staticmethod**
+```python
+import functools
+
+
+class ClassMethod:
+    def __init__(self, fn):
+        print(fn)
+        self._fn = fn
+
+    def __get__(self, instance, owner):
+        print(self, instance, owner)
+        # return self._fn(owner)
+        return functools.partial(self._fn, owner)
+
+
+class StaticMethod:
+    def __init__(self, fn):
+        print(fn)
+        self._fn = fn
+
+    def __get__(self, instance, owner):
+        print(self, instance, owner)
+        return self._fn
+
+
+class A:
+
+    @StaticMethod  
+    def foo():
+        print('static')
+
+    @ClassMethod  # foo = ClassMethod(foo) -> 新的foo是类ClassMethod的实例， 而ClassMethod非数据描述器，故通过A.foo读取类属性foo时，触发调用__get__，而__get__返回的是固定了参数cls的新的foo。所有最后可以直接foo()执行函数。
+    def bar(cls):
+        print(cls.__name__)
+
+
+if __name__ == '__main__':
+    f = A.foo
+    print(f)
+    f()
+    b = A.bar
+    print(b)
+    b()
+```
