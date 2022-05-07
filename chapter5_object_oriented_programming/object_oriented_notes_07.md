@@ -1,4 +1,4 @@
-# 面向对象高阶业务运用：检查Person类的参数类型
+# 面向对象高阶业务运用：检查Person实例的参数类型
 ```python
 class Person:
     def __init__(self, name: str, age: int):
