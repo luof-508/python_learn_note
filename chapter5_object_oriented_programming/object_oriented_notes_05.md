@@ -566,7 +566,7 @@ Context wrapper: __exit__, exit time=0.500204
 
 #### 13.3.9 `@contextlib.contextmanager`装饰器  
 
-对于只生成器函数，且只yield 1个值时，可使用contextmanager装饰器，实现上下文管理，将yield返回值与as子句后面的变量绑定，并执行完yield后面的函数语句
+对于单值生成器函数，即只yield 1个值时，可使用contextmanager装饰器，实现上下文管理，将yield返回值与as子句后面的变量绑定，并执行完yield后面的函数语句
 ```python
 import contextlib
 
