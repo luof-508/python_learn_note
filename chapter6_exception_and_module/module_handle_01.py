@@ -71,10 +71,10 @@ from python_learn_note import chapter3_file_io  # 导入包，包具有`__packag
 import module_test.module_test as mod  # 导入模块
 print('local module')
 import module_test.module_test
-import module_test.module_test as test123  # 可见，模块不会被重复导入，同一个作用域，同一个模块只会被导入一次。
+import module_test.module_test as test123  # 从执行结果可见，模块不会被重复导入，同一个作用域，同一个模块只会被导入一次。
 
-print(mod.imp_test, id(mod.imp_test))
-
+print(mod.imp_test, id(mod.imp_test), id(mod), id(test123), id(module_test.module_test))
+print(dir())
 
 ############################
 def mod_test():

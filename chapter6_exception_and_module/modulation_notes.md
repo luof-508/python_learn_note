@@ -8,6 +8,8 @@
 ## 一、导入语句
 ### 完全导入：`import name` 或`import ... as ...`   
 **导入逻辑**：找到指定的模块名name，加载并初始化它，生成模块对象name。注意：这个对象，在import所在的作用域的局部命名空间中有效。例如，当再一个函数中导入，则这个模块对象name仅在函数作用域有效。  
+**注意**： `import ... as ...`语句，模块虽然只被加载一次，但是模块下的属性与as子句后的变量绑定，这个变量相当于属性的引用，同一个属性是可以被多个不同的标识符引用的，
+因此当同一个属性与不同as子句的变量绑定时，都会保存在当前作用域的名词空间中，通过dir()就可以看到，如果查看他们的id，都是指向同一个内存地址，即同一个对象。
 
 **小结：** 导入顶级模块，其名称会加入到本地名词空间中，并绑定到其模块对象。导入非顶级模块，将其顶级模块加入到本地名词空间中，且必须使用完全限定名（从顶级模块开始的完整路径）来访问；如果使用了as，则使用as后的别名访问即可，且别名被加入到本地名词空间中。  
 
@@ -91,9 +93,10 @@ from python_learn_note import chapter3_file_io  # 导入包，包具有`__packag
 import module_test.module_test as mod  # 导入模块
 print('local module')
 import module_test.module_test
-import module_test.module_test as test123  # 可见，模块不会被重复导入，同一个作用域，同一个模块只会被导入一次。
+import module_test.module_test as test123  # 从执行结果可见，模块不会被重复导入，同一个作用域，同一个模块只会被导入一次。
 
-print(mod.imp_test, id(mod.imp_test))
+print(mod.imp_test, id(mod.imp_test), id(mod), id(test123), id(module_test.module_test))
+print(dir())
 
 
 ############################
