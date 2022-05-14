@@ -176,8 +176,11 @@ index 7bfdb71..df24fcc 100644
 |`git rm --cached file`| 蒋文件从暂存区转成未暂存，从版本库中删除，但不删除工作目录的该文件，即文件恢复成不追踪状态。
 
 
-    15、push到远端库
-
+    15、push到远端库。需要说明的是：通过`git remote add origin git@gitcode.net:your_name/test.git`命令，与远端仓库建立连接，这里的origin相当于一个标识符或者快捷方式，指代origin后面的远端链接，所以这个origin是可以用其他名字的，只是大家都习惯用origin了。
+    首先，在本地根目录初始化一个本地的版本库（创建`.git文件夹`）：`git init`；
+    然后：与远端库建立关联（需要先在远端库创建test项目），`git remote add origin git@gitcode.net:your_name/test.git`
+    再次：将所有要push到远端的文件加入暂存区stash并commit，`git add .;git commit -m "Initial commit"`；
+    最后：推送到远端，`git push -u origin master`。
 """
 
 if __name__ == '__main__':
