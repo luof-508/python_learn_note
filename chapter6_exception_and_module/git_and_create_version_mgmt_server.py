@@ -21,7 +21,7 @@
     ls /etc/init.d/my* 查看装上没有(名字：mysql）
     启动、停止：service mysql start/stop
 
-    2、启动是设置环境
+    2、启动并设置环境
     启动之前cmd命令行执行`/usr/bin/mysql_secure_installation`，测试mysql服务起来没有，并设置基本环境
     执行时，报ERROR***/mysql.sock时，表示mysql服务没起来
     `/usr/bin/mysql_secure_installation`：设置root密码、要不要匿名用户anonymous、允不允许root密码远程登录(一般允许，方便windows登录)等等。
@@ -99,7 +99,7 @@ $ git commit --amend
  2 files changed, 2 insertions(+), 1 deletion(-)
  create mode 100644 about.html
 
-    9、查看每次commit的md5值，`git log`。 git log  e101a8b9cf7，指定md5时，查看指定某次提交的信息。
+    9、查看每次commit的md5值，`git log`。 `git log e101a8b9cf7`，指定md5时，查看指定某次提交的信息。
 
     10、**查看差异**，`git diff`：查看已被跟踪文件未暂存的修改（工作区）与暂存区之间的差异；
                 `git diff --cached`，查看被跟踪文件，暂存区与版本库之间的差异；
@@ -119,8 +119,64 @@ index 7bfdb71..eb55abd 100644
     11、HEAD：HEAD指代最后一次提交；`HEAD^`，指代上一次提交；`HEAD^^`,指代上上一次提交；查看前n次提交,索引从0开始：`HEAD~n`。例如`git log HEAD~3`
 
 
+    12、检出，`git checkout`。从暂存区或某个commit，检出文件到工作区。例如，因为某个问题修改了一个文件，但是最后发现修改的文件有问题，需要恢复到
+    修改前的文件重新修改，但是改动量太大了，手动恢复很麻烦，怎么办，git checkout。
+|命令|含义|
+|:-:|:-|
+|`git checkout`| 列出暂存区可以被检出的文件
+|`git checkout file`|从暂存区恢复文件(检出文件)到工作区，就是覆盖工作区的文件，可以指定检出的文件。git checkout不会清楚stage。
+|`git checkout commit file`| 检出某个commit的指定文件到**暂存区和工作区**。
+|`git checkout .`| 检出暂存区的所有文件到工作区。
+
+例如：
+git checkout e101a8b9cf735c518e748c6378 about.html
+Updated 1 path from ee45251
+
+    13、重置，`git reset`。回退操作。
+|命令|含义|
+|:-:|:-|
+|`git reflog`| 显示commit的信息，只要HEAD发生变化，都可以通过这条命苦看到，相当于日志。
+|`git reset`|列出将被reset的文件。
+|`git reset [commit_id] file`| 重置指定文件的暂存区与指定commit一致，未给出commit默认和上一次commit一致，**工作区不影响**。**使用场景：比如，某一次问题修改commit后，发现有一个文件的修改与本问题无关，误commit了。则可以reset commit_id file,恢复这个文件的暂存区到前一个commit，然后再amend到提交的commit，而工作区的修改保持不变；如果工作区需要恢复，再通过`git checkout file`。**
+|`git reset commit_id`| （版本库操作）重置当前分支的HEAD为指定的commit，同时重置暂存区的所有文件，但工作区不变。
+|`git reset --hard [commit_id]`| （版本库操作）重置当前分支的HEAD为指定commit，未指定commit则默认为上一次commit，同时重置暂存区和工作区与指定commit一致。
+|`git reset --keep commit_id`| （版本库操作）重置当前HEAD为指定commit（相当于移动HEAD指针。可见，HEAD并不一定是最后一次提交），但保持暂存区和工作区不变。
+**例如**：
+>`echo "modify" > about.html`
+`git add about.html`  添加到暂存区
+`git reset about.html`  使用最后一次commit覆盖暂存区
+`git diff`  工作区不受影响，修改还在
+`cat about.html`
+`git add about.html`  再次将修改添加到暂存区
+`git reset --hard HEAD`  使用最后一次commit覆盖暂存区和工作区
+`cat about.html`
+`git diff`  工作区和暂存区都被覆盖，修改被清空无法找回。因此，需求开发中慎用，有可能一周的编码一键回到解放前。
+
+**又如**：从某一次commit退回about.html文件。回退后，`git diff`可以看到，暂存区已经回退，但工作区还在。
+>$ git reset e101a8b9cf735c5 about.html
+
+$ git diff
+diff --git a/about.html b/about.html
+index 7bfdb71..df24fcc 100644
+--- a/about.html
++++ b/about.html
+@@ -1 +1,4 @@
+-<html>about</html>
++<html>about;
++modify;
++20220514;
++</html>
 
 
+    14、移动和删除。注意这些执行命令都相当于修改，必须commit才生效。
+|命令|含义|
+|:-:|:-|
+|`git mv src dest`| 改名，直接把改名的改动放入暂存区，相当于`git add`。
+|`git rm file`| 会同时在版本库和工作目录中删除文件，这是真删除，慎操作，用`git rm --cached`比较安全。
+|`git rm --cached file`| 蒋文件从暂存区转成未暂存，从版本库中删除，但不删除工作目录的该文件，即文件恢复成不追踪状态。
+
+
+    15、push到远端库
 
 """
 
